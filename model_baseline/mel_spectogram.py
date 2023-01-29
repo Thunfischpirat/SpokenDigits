@@ -38,7 +38,7 @@ def downsample_spectrogram(spectrogram, num_frames):
 
     signal_length = spectrogram.shape[1]
     window_size = int(math.ceil(spectrogram.shape[1] / num_frames))
-    padding = window_size - (signal_length % window_size)
+    padding = num_frames * window_size - signal_length
 
     spectrogram_downsampled = np.zeros((spectrogram.shape[0], num_frames))
 
@@ -74,6 +74,4 @@ def create_features(split, num_mels=13, num_frames=10):
     labels = sdr_df[sdr_df['split'] == split].label.values
     return features, labels
 
-if __name__ == "__main__":
-    features, labels = create_features("TRAIN")
-    print(features.shape)
+
