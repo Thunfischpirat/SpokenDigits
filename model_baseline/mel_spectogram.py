@@ -1,8 +1,8 @@
+import os
 from pathlib import Path
 import librosa
 import numpy as np
 import pandas as pd
-from sklearn import preprocessing
 import math
 
 parent_dir = Path(__file__).parent.parent
@@ -58,6 +58,12 @@ def create_features(split, num_mels=13, num_frames=10):
     of mel-scaled representations of the signals in the split.
     """
 
+    # Load from lazy loading if possible.
+    if Path(f'data/{split.lower()}_features.npy').exists():
+        features = np.load(f'data/{split.lower()}_features.npy')
+        labels = np.load(f'data/{split.lower()}_labels.npy')
+        return features, labels
+
     sdr_df = pd.read_csv(parent_dir / 'SDR_metadata.tsv', sep='\t', header=0, index_col='Unnamed: 0')
     filenames = sdr_df[sdr_df['split'] == split].file.values
     audio_samples = [librosa.load(parent_dir / sample) for sample in filenames]
@@ -72,6 +78,12 @@ def create_features(split, num_mels=13, num_frames=10):
             features = np.vstack((features, mel_features))
 
     labels = sdr_df[sdr_df['split'] == split].label.values
+
+    # Save for lazy loading
+    os.makedirs('data', exist_ok=True)
+    np.save(f'data/{split.lower()}_features.npy', features)
+    np.save(f'data/{split.lower()}_labels.npy', labels)
+
     return features, labels
 
 
