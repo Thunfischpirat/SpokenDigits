@@ -1,8 +1,6 @@
-import numpy as np
 from sklearn.linear_model import SGDClassifier
-from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
-from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler
 
 classifier = make_pipeline(
     StandardScaler(),

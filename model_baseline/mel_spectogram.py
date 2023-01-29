@@ -1,11 +1,13 @@
+import math
 import os
 from pathlib import Path
+
 import librosa
 import numpy as np
 import pandas as pd
-import math
 
 parent_dir = Path(__file__).parent.parent
+
 
 def extract_melspectrogram(signal, sr, num_mels):
     """
@@ -23,7 +25,6 @@ def extract_melspectrogram(signal, sr, num_mels):
         fmin=50,  # min frequency threshold
         fmax=sr / 2,  # max frequency threshold, set to SAMPLING_RATE/2
     )
-
 
     return mel_features
 
@@ -43,14 +44,16 @@ def downsample_spectrogram(spectrogram, num_frames):
     spectrogram_downsampled = np.zeros((spectrogram.shape[0], num_frames))
 
     # pad signal with zeros
-    spectrogram = np.pad(spectrogram, ((0, 0), (0, padding)), 'constant')
-
+    spectrogram = np.pad(spectrogram, ((0, 0), (0, padding)), "constant")
 
     for section in range(num_frames):
-        spectrogram_downsampled[:, section] = np.mean(spectrogram[:, section*window_size:(section+1)*window_size], axis=1)
+        spectrogram_downsampled[:, section] = np.mean(
+            spectrogram[:, section * window_size : (section + 1) * window_size], axis=1
+        )
 
     spectrogram_downsampled = np.reshape(spectrogram_downsampled, (1, -1))
     return spectrogram_downsampled
+
 
 def create_features(split, num_mels=13, num_frames=10):
     """
@@ -59,13 +62,15 @@ def create_features(split, num_mels=13, num_frames=10):
     """
 
     # Load from lazy loading if possible.
-    if Path(f'data/{split.lower()}_features.npy').exists():
-        features = np.load(f'data/{split.lower()}_features.npy')
-        labels = np.load(f'data/{split.lower()}_labels.npy')
+    if Path(f"data/{split.lower()}_features.npy").exists():
+        features = np.load(f"data/{split.lower()}_features.npy")
+        labels = np.load(f"data/{split.lower()}_labels.npy")
         return features, labels
 
-    sdr_df = pd.read_csv(parent_dir / 'SDR_metadata.tsv', sep='\t', header=0, index_col='Unnamed: 0')
-    filenames = sdr_df[sdr_df['split'] == split].file.values
+    sdr_df = pd.read_csv(
+        parent_dir / "SDR_metadata.tsv", sep="\t", header=0, index_col="Unnamed: 0"
+    )
+    filenames = sdr_df[sdr_df["split"] == split].file.values
     audio_samples = [librosa.load(parent_dir / sample) for sample in filenames]
 
     features = None
@@ -77,13 +82,11 @@ def create_features(split, num_mels=13, num_frames=10):
         else:
             features = np.vstack((features, mel_features))
 
-    labels = sdr_df[sdr_df['split'] == split].label.values
+    labels = sdr_df[sdr_df["split"] == split].label.values
 
     # Save for lazy loading
-    os.makedirs('data', exist_ok=True)
-    np.save(f'data/{split.lower()}_features.npy', features)
-    np.save(f'data/{split.lower()}_labels.npy', labels)
+    os.makedirs("data", exist_ok=True)
+    np.save(f"data/{split.lower()}_features.npy", features)
+    np.save(f"data/{split.lower()}_labels.npy", labels)
 
     return features, labels
-
-
