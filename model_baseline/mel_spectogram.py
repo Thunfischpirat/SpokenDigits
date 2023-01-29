@@ -1,6 +1,7 @@
 from pathlib import Path
 import librosa
 import numpy as np
+import pandas as pd
 from sklearn import preprocessing
 import math
 
@@ -23,16 +24,8 @@ def extract_melspectrogram(signal, sr, num_mels):
         fmax=sr / 2,  # max frequency threshold, set to SAMPLING_RATE/2
     )
 
-    # for numerical stability added this line
-    mel_features = np.where(mel_features == 0, np.finfo(float).eps, mel_features)
 
-    # 20 * log10 to convert to log scale
-    log_mel_features = 20 * np.log10(mel_features)
-
-    # feature scaling
-    scaled_log_mel_features = preprocessing.scale(log_mel_features, axis=1)
-
-    return scaled_log_mel_features
+    return mel_features
 
 
 def downsample_spectrogram(spectrogram, num_frames):
@@ -59,16 +52,28 @@ def downsample_spectrogram(spectrogram, num_frames):
     spectrogram_downsampled = np.reshape(spectrogram_downsampled, (1, -1))
     return spectrogram_downsampled
 
+def create_features(split, num_mels=13, num_frames=10):
+    """
+    Given a split of the dataset (train, val, test), return a numpy array
+    of mel-scaled representations of the signals in the split.
+    """
+
+    sdr_df = pd.read_csv(parent_dir / 'SDR_metadata.tsv', sep='\t', header=0, index_col='Unnamed: 0')
+    filenames = sdr_df[sdr_df['split'] == split].file.values
+    audio_samples = [librosa.load(parent_dir / sample) for sample in filenames]
+
+    features = None
+    for i, (audio, sr) in enumerate(audio_samples):
+        mel_features = extract_melspectrogram(audio, sr, num_mels)
+        mel_features = downsample_spectrogram(mel_features, num_frames)
+        if i == 0:
+            features = mel_features
+        else:
+            features = np.vstack((features, mel_features))
+
+    labels = sdr_df[sdr_df['split'] == split].label.values
+    return features, labels
+
 if __name__ == "__main__":
-
-        # load audio file
-        audio_path = parent_dir / "speech_data/2_nicolas_16.wav"
-        signal, sr = librosa.load(audio_path)
-
-        # extract mel-scaled representation
-        scaled_log_mel_features = extract_melspectrogram(signal, sr, num_mels=13)
-
-        # extract 1d representation
-        mel_features_1d = downsample_spectrogram(scaled_log_mel_features, num_frames=10)
-
-        print(mel_features_1d.shape)
+    features, labels = create_features("TRAIN")
+    print(features.shape)
