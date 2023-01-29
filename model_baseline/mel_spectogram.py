@@ -2,6 +2,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 from sklearn import preprocessing
+import math
 
 parent_dir = Path(__file__).parent.parent
 
@@ -34,7 +35,7 @@ def extract_melspectrogram(signal, sr, num_mels):
     return scaled_log_mel_features
 
 
-def mel_1d_representation(scaled_log_mel_features, num_frames):
+def downsample_spectrogram(spectrogram, num_frames):
     """
     Given a mel-scaled representation of a signal, return a fixed-size
     representation of the signal as numpy array of size (1, num_frames)
@@ -42,18 +43,21 @@ def mel_1d_representation(scaled_log_mel_features, num_frames):
     them over the frequency axis.
     """
 
-    # average over frequency axis
-    averaged_mel_features = np.mean(scaled_log_mel_features, axis=0)
+    signal_length = spectrogram.shape[1]
+    window_size = int(math.ceil(spectrogram.shape[1] / num_frames))
+    padding = window_size - (signal_length % window_size)
 
-    # take num_frames equal sized chunks of the signal
-    mel_features_1d = np.array(
-        [
-            np.mean(averaged_mel_features[i : i + num_frames])
-            for i in range(0, len(averaged_mel_features), num_frames)
-        ]
-    )
+    spectrogram_downsampled = np.zeros((spectrogram.shape[0], num_frames))
 
-    return mel_features_1d
+    # pad signal with zeros
+    spectrogram = np.pad(spectrogram, ((0, 0), (0, padding)), 'constant')
+
+
+    for section in range(num_frames):
+        spectrogram_downsampled[:, section] = np.mean(spectrogram[:, section*window_size:(section+1)*window_size], axis=1)
+
+    spectrogram_downsampled = np.reshape(spectrogram_downsampled, (1, -1))
+    return spectrogram_downsampled
 
 if __name__ == "__main__":
 
@@ -65,6 +69,6 @@ if __name__ == "__main__":
         scaled_log_mel_features = extract_melspectrogram(signal, sr, num_mels=13)
 
         # extract 1d representation
-        mel_features_1d = mel_1d_representation(scaled_log_mel_features, num_frames=10)
+        mel_features_1d = downsample_spectrogram(scaled_log_mel_features, num_frames=10)
 
         print(mel_features_1d.shape)
