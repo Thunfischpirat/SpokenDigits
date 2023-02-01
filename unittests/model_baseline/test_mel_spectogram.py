@@ -1,15 +1,15 @@
 from unittest import TestCase
 
 import numpy as np
-from model_baseline.mel_spectogram import (create_features,
-                                           downsample_spectrogram)
+from model_baseline.data_loading import (create_features,
+                                         downsample_spectrogram)
 
 
 class TestDownsampleSpectrum(TestCase):
     """Test the downsample_spectrogram function."""
 
     def setUp(self) -> None:
-        """Prepare variables to be used in tests."""
+        """Prepare variables to be used in unittests."""
         self.spectrogram = 2 * np.array(
             [
                 [4.0, 3.0, 4.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0],

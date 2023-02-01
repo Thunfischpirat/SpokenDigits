@@ -10,7 +10,7 @@ classifier = make_pipeline(
 )
 
 if __name__ == "__main__":
-    from model_baseline.mel_spectogram import create_features
+    from model_baseline.data_loading import create_features
 
     num_mels = 13
     num_frames = 10

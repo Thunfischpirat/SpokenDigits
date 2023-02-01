@@ -71,7 +71,7 @@ def create_features(split, num_mels=13, num_frames=10):
         parent_dir / "SDR_metadata.tsv", sep="\t", header=0, index_col="Unnamed: 0"
     )
     filenames = sdr_df[sdr_df["split"] == split].file.values
-    audio_samples = [librosa.load(parent_dir / sample) for sample in filenames]
+    audio_samples = [librosa.load(parent_dir / sample, sr=None) for sample in filenames]
 
     features = None
     for i, (audio, sr) in enumerate(audio_samples):
