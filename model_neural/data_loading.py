@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 
 class MNISTAudio(Dataset):
     def __init__(self, annotations_dir, audio_dir, split="TRAIN"):
-        metadata = pd.read_csv(annotations_dir, sep = "\t", header = 0, index_col = "Unnamed: 0")
+        metadata = pd.read_csv(annotations_dir, sep="\t", header=0, index_col="Unnamed: 0")
         self.audio_labels = metadata[metadata["split"] == split].label.values
         self.audio_names = metadata[metadata["split"] == split].file.values
         self.audio_dir = audio_dir

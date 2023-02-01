@@ -55,14 +55,14 @@ def downsample_spectrogram(spectrogram, num_frames):
     return spectrogram_downsampled
 
 
-def create_features(split, num_mels=13, num_frames=10):
+def create_features(split, num_mels=13, num_frames=10, lazy_mode=True):
     """
     Given a split of the dataset (train, val, test), return a numpy array
     of mel-scaled representations of the signals in the split.
     """
 
     # Load from lazy loading if possible.
-    if Path(f"data/{split.lower()}_features.npy").exists():
+    if Path(f"data/{split.lower()}_features.npy").exists() and lazy_mode:
         features = np.load(f"data/{split.lower()}_features.npy")
         labels = np.load(f"data/{split.lower()}_labels.npy")
         return features, labels
@@ -85,8 +85,9 @@ def create_features(split, num_mels=13, num_frames=10):
     labels = sdr_df[sdr_df["split"] == split].label.values
 
     # Save for lazy loading
-    os.makedirs("data", exist_ok=True)
-    np.save(f"data/{split.lower()}_features.npy", features)
-    np.save(f"data/{split.lower()}_labels.npy", labels)
+    if lazy_mode:
+        os.makedirs("data", exist_ok=True)
+        np.save(f"data/{split.lower()}_features.npy", features)
+        np.save(f"data/{split.lower()}_labels.npy", labels)
 
     return features, labels

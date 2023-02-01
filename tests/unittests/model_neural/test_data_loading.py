@@ -5,7 +5,7 @@ import numpy as np
 
 from model_neural.data_loading import MNISTAudio
 
-base_dir = Path(__file__).parent.parent.parent
+base_dir = Path(__file__).parent.parent.parent.parent
 class TestMNISTAudio(TestCase):
     """ Test the MNISTAudio class. """
 
