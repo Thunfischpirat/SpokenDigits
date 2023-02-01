@@ -30,6 +30,11 @@ class MNISTAudio(Dataset):
         label = self.audio_labels[idx]
         return audio, label
 
+def pad_sequence(batch):
+    # Make all tensor in a batch the same length by padding with zeros
+    batch = [item.t() for item in batch]
+    batch = torch.nn.utils.rnn.pad_sequence(batch, batch_first=True, padding_value=0.)
+    return batch.permute(0, 2, 1)
 
 def collate_audio(batch):
     """Collate a batch of audio samples and labels into a batch of tensors."""
@@ -41,7 +46,7 @@ def collate_audio(batch):
         targets += [label]
 
     # Group the list of tensors into a batched tensor
-    tensors = torch.nn.utils.rnn.pad_sequence(tensors, batch_first=True, padding_value=0.0)
+    tensors = pad_sequence(tensors)
     targets = torch.stack(targets)
 
     return tensors, targets
