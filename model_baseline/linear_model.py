@@ -21,13 +21,13 @@ if __name__ == "__main__":
     train_preds = classifier.predict(train_features)
     print(f"Confusion matrix:\n{confusion_matrix(train_labels, train_preds)}\n")
     print(f"Classification Report:\n{classification_report(train_labels, train_preds)}\n")
-    print("----------------------------------DEV-SET----------------------------------------")
+    print("----------------------------------DEV-SET-----------------------------------------")
     split = "DEV"
     dev_features, dev_labels = create_features(split, num_mels, num_frames)
     dev_preds = classifier.predict(dev_features)
     print(f"Confusion matrix:\n{confusion_matrix(dev_labels, dev_preds)}\n")
     print(f"Classification Report:\n{classification_report(dev_labels, dev_preds)}\n")
-    print("---------------------------------TEST_SET----------------------------------------")
+    print("---------------------------------TEST_SET------------------------------------------")
     split = "TEST"
     test_features, test_labels = create_features(split, num_mels, num_frames)
     test_preds = classifier.predict(test_features)
