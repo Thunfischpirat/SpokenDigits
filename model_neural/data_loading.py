@@ -14,19 +14,23 @@ from torch.nn.functional import one_hot
 
 
 class MNISTAudio(Dataset):
-    def __init__(self, annotations_dir, audio_dir, split="TRAIN"):
+    def __init__(self, annotations_dir, audio_dir, split="TRAIN", to_mel=False):
         metadata = pd.read_csv(annotations_dir, sep="\t", header=0, index_col="Unnamed: 0")
         audio_labels = torch.tensor(metadata[metadata["split"] == split].label.values)
-        self.audio_labels = one_hot(audio_labels, 10)
+        self.audio_labels = audio_labels
         self.audio_names = metadata[metadata["split"] == split].file.values
         self.audio_dir = audio_dir
+        self.to_mel = to_mel
 
     def __len__(self):
         return len(self.audio_labels)
 
     def __getitem__(self, idx):
         audio_path = os.path.join(self.audio_dir, self.audio_names[idx])
-        audio, _ = torchaudio.load(audio_path)
+        audio, sample_rate = torchaudio.load(audio_path)
+        if self.to_mel:
+            mel_spectrogram = torchaudio.transforms.MelSpectrogram(sample_rate, n_fft=200, hop_length=80, n_mels=39)(audio)
+            audio = mel_spectrogram.squeeze(0)
         label = self.audio_labels[idx]
         return audio, label
 
