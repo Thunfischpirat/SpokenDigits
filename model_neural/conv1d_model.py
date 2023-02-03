@@ -4,10 +4,15 @@ import torch.nn.functional as F
 from torch import optim
 
 
+
 class M5(nn.Module):
-    def __init__(self, n_input=1, n_channel=32, n_output=10):
+    def __init__(
+        self, n_input=1, n_channel=32, n_output=10, initial_kernel_size=60, initial_stride=8
+    ):
         super().__init__()
-        self.conv1 = nn.Conv1d(n_input, n_channel, kernel_size=60, stride=8)
+        self.conv1 = nn.Conv1d(
+            n_input, n_channel, kernel_size=initial_kernel_size, stride=initial_stride
+        )
         self.bn1 = nn.BatchNorm1d(n_channel)
         self.pool1 = nn.MaxPool1d(4)
         self.conv2 = nn.Conv1d(n_channel, n_channel, kernel_size=3)
@@ -39,34 +44,41 @@ class M5(nn.Module):
         x = self.fc1(x)
         return F.log_softmax(x, dim=2)
 
+
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
+    # Based on https://pytorch.org/tutorials/intermediate/speech_command_classification_with_torchaudio_tutorial.html
     from pathlib import Path
     from torch.utils.data import DataLoader
     from model_neural.data_loading import MNISTAudio, collate_audio
 
+    torch.manual_seed(32)
     base_dir = Path(__file__).parent.parent
     annotations_dir = base_dir / "SDR_metadata.tsv"
 
     to_mel = False
 
-    trainset = MNISTAudio(annotations_dir=annotations_dir, audio_dir=base_dir, split="TRAIN", to_mel=to_mel)
+    trainset = MNISTAudio(
+        annotations_dir=annotations_dir, audio_dir=base_dir, split="TRAIN", to_mel=to_mel
+    )
     train_loader = DataLoader(trainset, batch_size=64, collate_fn=collate_audio, shuffle=True)
 
-    valset = MNISTAudio(annotations_dir=annotations_dir, audio_dir=base_dir, split="DEV", to_mel=to_mel)
+    valset = MNISTAudio(
+        annotations_dir=annotations_dir, audio_dir=base_dir, split="DEV", to_mel=to_mel
+    )
     validation_loader = DataLoader(valset, batch_size=64, collate_fn=collate_audio, shuffle=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using: '{device}' as device for training.")
 
     if to_mel:
-        model = M5(n_input=39)
+        model = M5(n_input=39, initial_kernel_size=6, initial_stride=1)
     else:
-        model = M5(n_input=1)
+        model = M5()
 
     model.to(device)
 
@@ -77,7 +89,7 @@ if __name__ == "__main__":
     print("Number of parameters: %s" % n)
 
     log_interval = 5
-    n_epoch = 200
+    n_epoch = 100
 
     loss_func = nn.NLLLoss()
 
@@ -122,13 +134,18 @@ if __name__ == "__main__":
         # Update the learning rate of the optimizer
         scheduler.step()
 
+
         if epoch % log_interval == 0:
             mean_loss_train = sum(losses_train) / len(losses_train)
             mean_loss_val = sum(losses_val) / len(losses_val)
             accuracy = 100.0 * correct / len(validation_loader.dataset)
             print(
-                f"Epoch: {epoch} Train-Loss: {mean_loss_train:.6f} Val-Loss: {mean_loss_val:.6f} Val-Accuracy: {accuracy:.2f}"
+                f"Epoch: {epoch} Train-Loss: {mean_loss_train:.6f} "
+                f"Val-Loss: {mean_loss_val:.6f} "
+                f"Val-Accuracy: {accuracy:.2f} "
             )
+
+    torch.save(model.state_dict(), "models/conv1d_model.pt")
 
 
 
