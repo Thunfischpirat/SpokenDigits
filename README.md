@@ -8,7 +8,7 @@ We focus on developing a SDR system in a speaker-independent setting. That is, t
 
 ## Dataset
 The dataset contains 3000 audio clips of spoken digits (0-9) in English in `.wav` format it can be found in the folder `speech_data`.
-The total size of the dataset is 26Mb. The file `SDR_metadata.tsv` contains information such as the labels of the audio clips and to whether they are used for trainig, evaluation or testing.
+The total size of the dataset is 26Mb. The file `SDR_metadata.tsv` contains information such as the labels of the audio clips and to whether they are used for training, evaluation or testing.
 
 ## Installation
 The Python version used in our project is 3.9.13. You can use poetry to install the dependencies. To install poetry, run the following command:
