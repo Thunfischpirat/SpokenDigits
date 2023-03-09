@@ -4,10 +4,9 @@ import torch.nn.functional as F
 from torch import optim
 
 
-
 class M5(nn.Module):
     def __init__(
-        self, n_input=1, n_channel=32, n_output=10, initial_kernel_size=60, initial_stride=8
+            self, n_input=1, n_channel=32, n_output=10, initial_kernel_size=60, initial_stride=8
     ):
         super().__init__()
         self.conv1 = nn.Conv1d(
@@ -47,7 +46,6 @@ class M5(nn.Module):
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
 
 
 if __name__ == "__main__":
@@ -98,7 +96,6 @@ if __name__ == "__main__":
         model.train()
         losses_train = []
         for batch_idx, (data, target) in enumerate(train_loader):
-
             data = data.to(device)
             target = target.to(device)
 
@@ -118,7 +115,6 @@ if __name__ == "__main__":
         correct = 0
         with torch.no_grad():
             for data, target in validation_loader:
-
                 data = data.to(device)
                 target = target.to(device)
 
@@ -134,7 +130,6 @@ if __name__ == "__main__":
         # Update the learning rate of the optimizer
         scheduler.step()
 
-
         if epoch % log_interval == 0:
             mean_loss_train = sum(losses_train) / len(losses_train)
             mean_loss_val = sum(losses_val) / len(losses_val)
@@ -146,6 +141,3 @@ if __name__ == "__main__":
             )
 
     torch.save(model.state_dict(), "models/conv1d_model.pt")
-
-
-

@@ -29,16 +29,19 @@ class MNISTAudio(Dataset):
         audio_path = os.path.join(self.audio_dir, self.audio_names[idx])
         audio, sample_rate = torchaudio.load(audio_path)
         if self.to_mel:
-            mel_spectrogram = torchaudio.transforms.MelSpectrogram(sample_rate, n_fft=200, hop_length=80, n_mels=39)(audio)
+            mel_spectrogram = torchaudio.transforms.MelSpectrogram(sample_rate, n_fft=200, hop_length=80, n_mels=39)(
+                audio)
             audio = mel_spectrogram.squeeze(0)
         label = self.audio_labels[idx]
         return audio, label
+
 
 def pad_sequence(batch):
     # Make all tensor in a batch the same length by padding with zeros
     batch = [item.t() for item in batch]
     batch = torch.nn.utils.rnn.pad_sequence(batch, batch_first=True, padding_value=0.)
     return batch.permute(0, 2, 1)
+
 
 def collate_audio(batch):
     """Collate a batch of audio samples and labels into a batch of tensors."""

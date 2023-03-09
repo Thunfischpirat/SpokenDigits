@@ -36,10 +36,10 @@ class TestCollation(TestCase):
         self.label_2 = torch.tensor([0, 1, 0, 0])
         self.tensor_3 = torch.tensor([[8, 9]])
         self.label_3 = torch.tensor([0, 0, 1, 0])
+
     def test_collate_audio(self):
         """Test that the pad_sequence function returns the correct shape."""
         batch = [(self.tensor_1, self.label_1), (self.tensor_2, self.label_2), (self.tensor_3, self.label_3)]
         padded_batch, targets = collate_audio(batch)
         self.assertTrue(padded_batch.shape == (3, 1, 4))
         self.assertTrue(targets.shape == (3, 4))
-

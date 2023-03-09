@@ -8,6 +8,7 @@ from model_baseline.data_loading import (create_features,
 
 base_dir = Path(__file__).parent.parent.parent
 
+
 class TestDownsampleSpectrum(TestCase):
     """Test the downsample_spectrogram function."""
 
@@ -41,5 +42,3 @@ class TestCreateFeatures(TestCase):
         features, labels = create_features(self.split, self.num_mels, self.num_frames, lazy_mode=False)
         self.assertEqual(features.shape[1], 130)
         self.assertFalse(np.isnan(features).any())
-
-
