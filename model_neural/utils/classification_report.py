@@ -2,7 +2,7 @@ from pathlib import Path
 
 import torch
 import torchmetrics as tm
-from model_neural.data_loading import MNISTAudio, collate_audio
+from model_neural.utils.data_loading import MNISTAudio, collate_audio
 from torch.utils.data import DataLoader
 from conv1d_model import M5
 
@@ -13,7 +13,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using: '{device}' as device for report.")
 
 model = M5()
-model. load_state_dict(torch.load("models/conv1d_model.pt"))
+model. load_state_dict(torch.load("../models/conv1d_model.pt"))
 model.to(device)
 model.eval()
 

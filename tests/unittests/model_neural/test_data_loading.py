@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import torch
 
-from model_neural.data_loading import MNISTAudio, collate_audio
+from model_neural.utils.data_loading import MNISTAudio, collate_audio
 
 base_dir = Path(__file__).parent.parent.parent.parent
 
