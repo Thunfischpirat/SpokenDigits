@@ -5,7 +5,7 @@ import torch
 
 from model_neural.utils.data_loading import MNISTAudio, collate_audio
 
-base_dir = Path(__file__).parent.parent.parent.parent
+base_dir = Path(__file__).parent.parent.parent.parent.parent
 
 
 class TestMNISTAudio(TestCase):
