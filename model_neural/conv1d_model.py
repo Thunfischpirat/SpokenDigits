@@ -18,7 +18,7 @@ class conv1d_block(nn.Module):
         return x
 
 
-class conv1d_model(nn.Module):
+class Conv1dModel(nn.Module):
     """Convolutional neural network for 1D data."""
 
     def __init__(
@@ -42,7 +42,7 @@ class conv1d_model(nn.Module):
         return F.log_softmax(x, dim=2)
 
 
-class conv1d_mel_model(nn.Module):
+class Conv1dMelModel(nn.Module):
     """Convolutional neural network for 1D data."""
 
     def __init__(
@@ -69,19 +69,26 @@ class conv1d_mel_model(nn.Module):
 if __name__ == "__main__":
     # Based on https://pytorch.org/tutorials/intermediate/speech_command_classification_with_torchaudio_tutorial.html
 
-    from utils.helpers import count_parameters, train_model
+    torch.manual_seed(32)
+    from utils.helpers import count_parameters, train_model, optimize_hyperparams
 
     to_mel = False
 
     if to_mel:
-        model_name = "conv1d_mel_model"
-        model = conv1d_mel_model()
+        model_name = "Conv1dMelModel"
+        model = Conv1dMelModel()
     else:
-        model_name = "conv1d_model"
-        model = conv1d_model()
+        model_name = "Conv1dModel"
+        model = Conv1dModel()
 
     print(f"Number of parameters: {count_parameters(model)}")
 
-    model = train_model(model, lr=0.001, to_mel=to_mel)
+    trained_model = optimize_hyperparams(
+        model,
+        learning_rates=[0.002, 0.001],
+        weight_decays=[0.002, 0.001],
+        step_sizes=[10, 15],
+        gammas=[0.2, 0.1],
+        to_mel=to_mel
+    )
 
-    torch.save(model.state_dict(), f"models/{model_name}.pt")
