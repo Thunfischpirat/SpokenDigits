@@ -3,10 +3,10 @@ from pathlib import Path
 from unittest import TestCase
 
 import numpy as np
-from model_baseline.data_loading import (create_features,
-                                         downsample_spectrogram)
+from model_baseline.data_loading import create_features, downsample_spectrogram
 
 base_dir = Path(__file__).parent.parent.parent
+
 
 class TestDownsampleSpectrum(TestCase):
     """Test the downsample_spectrogram function."""
@@ -38,8 +38,8 @@ class TestCreateFeatures(TestCase):
 
     def test_create_features(self):
         """Test that the create_features function returns the correct shape and no entry is nan."""
-        features, labels = create_features(self.split, self.num_mels, self.num_frames, lazy_mode=False)
+        features, labels = create_features(
+            self.split, self.num_mels, self.num_frames, lazy_mode=False
+        )
         self.assertEqual(features.shape[1], 130)
         self.assertFalse(np.isnan(features).any())
-
-

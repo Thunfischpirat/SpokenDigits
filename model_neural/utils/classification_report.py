@@ -2,9 +2,9 @@ from pathlib import Path
 
 import torch
 import torchmetrics as tm
+from conv1d_model import M5
 from model_neural.utils.data_loading import MNISTAudio, collate_audio
 from torch.utils.data import DataLoader
-from conv1d_model import M5
 
 base_dir = Path(__file__).parent.parent
 annotations_dir = base_dir / "SDR_metadata.tsv"
@@ -13,18 +13,29 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using: '{device}' as device for report.")
 
 model = M5()
-model. load_state_dict(torch.load("../models/conv1d_model.pt"))
+model.load_state_dict(torch.load("../models/conv1d_model.pt"))
 model.to(device)
 model.eval()
 
 # This code creates a dictionary of PyTorch DataLoader objects for the MNIST audio dataset for each split of the data.
-loaders = dict([(split, DataLoader(MNISTAudio(annotations_dir=annotations_dir, audio_dir=base_dir, split=split),
-                                              batch_size=64,
-                                              collate_fn=collate_audio,
-                                              shuffle=True)) for split in ["TRAIN", "DEV", "TEST"]])
+loaders = dict(
+    [
+        (
+            split,
+            DataLoader(
+                MNISTAudio(annotations_dir=annotations_dir, audio_dir=base_dir, split=split),
+                batch_size=64,
+                collate_fn=collate_audio,
+                shuffle=True,
+            ),
+        )
+        for split in ["TRAIN", "DEV", "TEST"]
+    ]
+)
+
 
 def classification_report(accuracy, *args):
-    """ Creates a classification report for a model in form of a formatted string."""
+    """Creates a classification report for a model in form of a formatted string."""
     metrics = torch.vstack([*args]).t()
     report = "   ".join(f"{col}" for col in ["class", "precision", "recall", "f1-score"]) + "\n"
     for i, row in enumerate(metrics):

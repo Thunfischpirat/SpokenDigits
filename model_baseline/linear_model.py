@@ -1,8 +1,7 @@
 from sklearn.linear_model import SGDClassifier
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import classification_report
 
 classifier = make_pipeline(
     StandardScaler(),

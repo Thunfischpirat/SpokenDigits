@@ -2,9 +2,9 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from torch import optim, nn
-from torch.utils.data import DataLoader
 from model_neural.utils.data_loading import MNISTAudio, collate_audio
+from torch import nn, optim
+from torch.utils.data import DataLoader
 
 torch.manual_seed(32)
 base_dir = Path(__file__).parent.parent.parent
@@ -40,7 +40,6 @@ def train_model(
     lr: float = 0.01,
     weight_decay: float = 0.0001,
     n_epoch: int = 100,
-    log_interval: int = 5,
     batch_size: int = 32,
     early_stopping: bool = False,
     to_mel: bool = False,
@@ -61,7 +60,7 @@ def train_model(
 
     # Used for early stopping, if enabled.
     best_loss_val = float("inf")
-    counter = None
+    counter = 10
     best_model = None
 
     for epoch in range(n_epoch):
@@ -103,7 +102,7 @@ def train_model(
         # Update the learning rate of the optimizer
         scheduler.step()
 
-        if epoch % log_interval == 0:
+        if epoch % 5 == 0:
             mean_loss_train = sum(losses_train) / len(losses_train)
             mean_loss_val = sum(losses_val) / len(losses_val)
             accuracy = 100.0 * correct / len(validation_loader.dataset)
@@ -123,10 +122,10 @@ def train_model(
                 best_loss_val = loss_val
                 best_model = model
                 counter = 10
-            elif counter > 0:
-                counter -= 1
-            else:
+            elif counter == 0:
                 print(f"Validation loss didnt improve further. Stopping training in epoch {epoch}!")
                 return best_model
+
+            counter -= 1
 
     return model

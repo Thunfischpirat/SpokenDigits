@@ -69,7 +69,7 @@ class conv1d_mel_model(nn.Module):
 if __name__ == "__main__":
     # Based on https://pytorch.org/tutorials/intermediate/speech_command_classification_with_torchaudio_tutorial.html
 
-    from utils.helpers import train_model, count_parameters
+    from utils.helpers import count_parameters, train_model
 
     to_mel = False
 
@@ -83,7 +83,5 @@ if __name__ == "__main__":
     print(f"Number of parameters: {count_parameters(model)}")
 
     model = train_model(model, lr=0.001, to_mel=to_mel)
-
-
 
     torch.save(model.state_dict(), f"models/{model_name}.pt")

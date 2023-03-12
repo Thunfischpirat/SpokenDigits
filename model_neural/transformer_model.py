@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from model_neural.utils.helpers import count_parameters, train_model
 
 
@@ -23,6 +22,7 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         x = x + self.P[:, : x.shape[1], :].to(x.device)
         return self.dropout(x)
+
 
 class ViTMLP(nn.Module):
     def __init__(self, mlp_num_hidden, mlp_num_outputs):
