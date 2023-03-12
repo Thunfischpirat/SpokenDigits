@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     model = transformer_model()
 
-    trained_model = train_model(model, n_epoch=100, lr=0.0001, to_mel=True)
+    trained_model = train_model(model, n_epoch=100, lr=0.0001, early_stopping=True, to_mel=True)
 
     # Since we are using LazyLinear, we need to call the model once to initialize the weights.
     num_params = count_parameters(trained_model)

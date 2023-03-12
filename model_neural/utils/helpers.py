@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import torch
 from torch import optim, nn
@@ -40,7 +41,8 @@ def train_model(
     weight_decay: float = 0.0001,
     n_epoch: int = 100,
     log_interval: int = 5,
-    batch_size: int = 64,
+    batch_size: int = 32,
+    early_stopping: bool = False,
     to_mel: bool = False,
 ):
     """Train a model on the MNIST audio dataset."""
@@ -56,6 +58,11 @@ def train_model(
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
 
     loss_func = nn.NLLLoss()
+
+    # Used for early stopping, if enabled.
+    best_loss_val = float("inf")
+    counter = None
+    best_model = None
 
     for epoch in range(n_epoch):
         # -------------------- TRAINING --------------------
@@ -105,5 +112,21 @@ def train_model(
                 f"Val-Loss: {mean_loss_val:.6f} "
                 f"Val-Accuracy: {accuracy:.2f} "
             )
+
+        if early_stopping and epoch > 10:
+            loss_val = sum(losses_val)
+            if loss_val < best_loss_val:
+                accuracy = 100.0 * correct / len(validation_loader.dataset)
+                print(
+                    f"Validation loss improved in epoch {epoch}. Current accuracy: {accuracy:.2f}. Keeping model!"
+                )
+                best_loss_val = loss_val
+                best_model = model
+                counter = 10
+            elif counter > 0:
+                counter -= 1
+            else:
+                print(f"Validation loss didnt improve further. Stopping training in epoch {epoch}!")
+                return best_model
 
     return model
