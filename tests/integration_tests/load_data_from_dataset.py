@@ -1,6 +1,6 @@
 from pathlib import Path
 from torch.utils.data import DataLoader
-from model_neural.data_loading import MNISTAudio, collate_audio
+from model_neural.utils.data_loading import MNISTAudio, collate_audio
 
 base_dir = Path(__file__).parent.parent.parent
 annotations_dir = base_dir / "SDR_metadata.tsv"
