@@ -10,27 +10,49 @@ base_dir = Path(__file__).parent.parent.parent
 annotations_dir = base_dir / "SDR_metadata.tsv"
 
 
-def count_parameters(model):
+def count_parameters(model: nn.Module):
+    """Count the number of trainable parameters in a model."""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-def train_model(model, lr=0.01, n_epoch=100, log_interval=5, batch_size=64, to_mel=False):
-    trainset = MNISTAudio(
+def get_data_loaders(batch_size: int = 64, to_mel: bool = False):
+    """Get the data loaders for the MNIST audio dataset."""
+    train_set = MNISTAudio(
         annotations_dir=annotations_dir, audio_dir=base_dir, split="TRAIN", to_mel=to_mel
     )
-    train_loader = DataLoader(trainset, batch_size=batch_size, collate_fn=collate_audio, shuffle=True)
+    train_loader = DataLoader(
+        train_set, batch_size=batch_size, collate_fn=collate_audio, shuffle=True
+    )
 
-    valset = MNISTAudio(
+    validation_set = MNISTAudio(
         annotations_dir=annotations_dir, audio_dir=base_dir, split="DEV", to_mel=to_mel
     )
-    validation_loader = DataLoader(valset, batch_size=batch_size, collate_fn=collate_audio, shuffle=True)
+    validation_loader = DataLoader(
+        validation_set, batch_size=batch_size, collate_fn=collate_audio, shuffle=True
+    )
+
+    return train_loader, validation_loader
+
+
+def train_model(
+    model: nn.Module,
+    lr: float = 0.01,
+    weight_decay: float = 0.0001,
+    n_epoch: int = 100,
+    log_interval: int = 5,
+    batch_size: int = 64,
+    to_mel: bool = False,
+):
+    """Train a model on the MNIST audio dataset."""
+
+    train_loader, validation_loader = get_data_loaders(batch_size=batch_size, to_mel=to_mel)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using: '{device}' as device for training.")
 
     model.to(device)
 
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
 
     loss_func = nn.NLLLoss()
