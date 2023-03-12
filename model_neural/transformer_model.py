@@ -5,13 +5,29 @@ import torch.nn.functional as F
 from model_neural.utils.helpers import count_parameters, train_model
 
 
-class PatchEmbedding(nn.Module):
-    def __init__(self, spec_dim, patch_size, stride, num_hidden):
+class PositionalEncoding(nn.Module):
+    """Positional encoding."""
+
+    def __init__(self, num_hiddens, dropout, max_len=150):
         super().__init__()
-        # Apply formula 14.12 from pml book to calculate num_patches.
-        self.num_patches = ((spec_dim[0] - patch_size + stride) // stride) * (
-            (spec_dim[1] - patch_size + stride) // stride
+        self.dropout = nn.Dropout(dropout)
+        # Create a long enough P
+        self.P = torch.zeros((1, max_len, num_hiddens))
+        mask = torch.arange(max_len, dtype=torch.float32).reshape(-1, 1) / torch.pow(
+            10000, torch.arange(0, num_hiddens, 2, dtype=torch.float32) / num_hiddens
         )
+        # 0::2 means even indices, 1::2 means odd indices.
+        self.P[:, :, 0::2] = torch.sin(mask)
+        self.P[:, :, 1::2] = torch.cos(mask)
+
+    def forward(self, x):
+        x = x + self.P[:, : x.shape[1], :].to(x.device)
+        return self.dropout(x)
+
+
+class PatchEmbedding(nn.Module):
+    def __init__(self, patch_size, stride, num_hidden):
+        super().__init__()
         self.conv = nn.LazyConv2d(num_hidden, kernel_size=patch_size, stride=stride)
 
     def forward(self, x):
@@ -40,27 +56,25 @@ class ViTBlock(nn.Module):
         self.mlp = ViTMLP(mlp_num_hidden, num_hidden)
 
     def forward(self, x, valid_lens=None):
-        x = x + self.attention(*([self.ln1(x)] * 3), need_weights=False)[0]
+        x = x + self.attention(*([self.ln1(x)] * 3))[0]
         return x + self.mlp(self.ln2(x))
 
 
 class transformer_model(nn.Module):
     def __init__(
         self,
-        sample_size=(39,88),
-        patch_size=8,
-        stride=5,
+        patch_size=16,
+        stride=10,
         num_hidden=128,
-        mlp_num_hidden=64,
+        mlp_num_hidden=128,
         num_heads=4,
-        num_blocks=1,
+        num_blocks=2,
         num_classes=10,
     ):
         super().__init__()
-        self.patch_embedding = PatchEmbedding(sample_size, patch_size, stride, num_hidden)
+        self.patch_embedding = PatchEmbedding(patch_size, stride, num_hidden)
         self.cls_token = nn.Parameter(torch.zeros(1, 1, num_hidden))
-        num_steps = self.patch_embedding.num_patches + 1
-        self.pos_embedding = nn.Parameter(torch.randn(1, num_steps, num_hidden))
+        self.pos_embedding = PositionalEncoding(num_hidden, 0.1)
         self.dropout = nn.Dropout(0.1)
         self.blocks = nn.Sequential()
         for i in range(num_blocks):
@@ -70,18 +84,13 @@ class transformer_model(nn.Module):
         self.head = nn.Sequential(nn.LayerNorm(num_hidden), nn.Linear(num_hidden, num_classes))
 
     def forward(self, x):
+        # Add channel dimension.
         x = x.unsqueeze(1)
-        if x.shape[3] > 88:
-            x = F.interpolate(x, (39,88))
-        elif x.shape[3] < 88:
-            # Pad last dimension of x with zeros.
-            x = F.pad(x, (0, 88 - x.shape[3]))
-
         x = self.patch_embedding(x)
         # Add cls token for each sample in the batch.
         cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)
         x = torch.cat((cls_tokens, x), dim=1)
-        x = x + self.pos_embedding
+        x = x + self.pos_embedding(x)
         x = self.dropout(x)
         for block in self.blocks:
             x = block(x)
@@ -93,11 +102,9 @@ if __name__ == "__main__":
 
     model = transformer_model()
 
-    model = train_model(model, n_epoch=20, lr=0.0001, to_mel=True)
+    model = train_model(model, n_epoch=100, lr=0.0001, to_mel=True)
 
     num_params = count_parameters(model)
     print("Number of parameters: %s" % num_params)
 
     torch.save(model.state_dict(), "models/transformer_model.pt")
-
-
