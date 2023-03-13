@@ -1,7 +1,10 @@
+import os
+
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+import joblib
 
 classifier = make_pipeline(
     StandardScaler(),
@@ -17,6 +20,8 @@ if __name__ == "__main__":
     print("----------------------------------TRAIN-SET----------------------------------------")
     train_features, train_labels = create_features(split, num_mels, num_frames)
     classifier.fit(train_features, train_labels)
+    if not os.path.exists("linear_model.joblib"):
+        joblib.dump(classifier, "linear_model.joblib")
     train_preds = classifier.predict(train_features)
     print(f"Confusion matrix:\n{confusion_matrix(train_labels, train_preds)}\n")
     print(f"Classification Report:\n{classification_report(train_labels, train_preds)}\n")
