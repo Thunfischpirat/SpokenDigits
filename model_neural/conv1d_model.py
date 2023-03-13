@@ -39,7 +39,7 @@ class Conv1dModel(nn.Module):
         x = F.avg_pool1d(x, x.shape[-1])
         x = x.permute(0, 2, 1)
         x = self.fc1(x)
-        return F.log_softmax(x, dim=2)
+        return x
 
 
 class Conv1dMelModel(nn.Module):
@@ -63,16 +63,18 @@ class Conv1dMelModel(nn.Module):
         x = F.avg_pool1d(x, x.shape[-1])
         x = x.permute(0, 2, 1)
         x = self.fc1(x)
-        return F.log_softmax(x, dim=2)
+        return x
 
 
 if __name__ == "__main__":
     # Based on https://pytorch.org/tutorials/intermediate/speech_command_classification_with_torchaudio_tutorial.html
 
     torch.manual_seed(32)
-    from utils.helpers import count_parameters, train_model, optimize_hyperparams
+    from utils.helpers import (count_parameters, optimize_hyperparams,
+                               train_model)
 
     to_mel = False
+    optimize_hp = False
 
     if to_mel:
         model_name = "Conv1dMelModel"
@@ -83,12 +85,16 @@ if __name__ == "__main__":
 
     print(f"Number of parameters: {count_parameters(model)}")
 
-    trained_model = optimize_hyperparams(
-        model,
-        learning_rates=[0.002, 0.001],
-        weight_decays=[0.002, 0.001],
-        step_sizes=[10, 15],
-        gammas=[0.2, 0.1],
-        to_mel=to_mel
-    )
-
+    if not optimize_hp:
+        trained_model, _ = train_model(
+            model, lr=0.002, weight_decay=0.002, step_size=10, gamma=0.1, to_mel=to_mel
+        )
+    else:
+        trained_model, _ = optimize_hyperparams(
+            model,
+            learning_rates=[0.002, 0.001],
+            weight_decays=[0.002, 0.001],
+            step_sizes=[10, 15],
+            gammas=[0.2, 0.1],
+            to_mel=to_mel,
+        )
