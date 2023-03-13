@@ -14,6 +14,6 @@ The total size of the dataset is 26Mb. The file `SDR_metadata.tsv` contains info
 The Python version used in our project is 3.9.13. You can use poetry to install the dependencies. To set up the poetry environment, run the following command:
 ```bash
 poetry install
-poetry run pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu117
+poetry run pip3 install torch torchvision torchaudio torchmetrics --extra-index-url https://download.pytorch.org/whl/cu117
 ```
 The last step is necessary to ensure that pytorch is installed with GPU support. Alternatively you can use the `requirements.txt` file to install the dependencies.

@@ -1,12 +1,14 @@
+import copy
+import itertools
+import os
 from pathlib import Path
-from typing import Any
+from typing import List
 
 import torch
-from torch import optim, nn
-from torch.utils.data import DataLoader
 from model_neural.utils.data_loading import MNISTAudio, collate_audio
+from torch import nn, optim
+from torch.utils.data import DataLoader
 
-torch.manual_seed(32)
 base_dir = Path(__file__).parent.parent.parent
 annotations_dir = base_dir / "SDR_metadata.tsv"
 
@@ -38,11 +40,12 @@ def get_data_loaders(batch_size: int = 64, to_mel: bool = False):
 def train_model(
     model: nn.Module,
     lr: float = 0.01,
-    weight_decay: float = 0.0001,
+    weight_decay: float = 0.01,
+    step_size: int = 20,
+    gamma: float = 0.1,
     n_epoch: int = 100,
-    log_interval: int = 5,
     batch_size: int = 32,
-    early_stopping: bool = False,
+    early_stopping: bool = True,
     to_mel: bool = False,
 ):
     """Train a model on the MNIST audio dataset."""
@@ -53,16 +56,17 @@ def train_model(
     print(f"Using: '{device}' as device for training.")
 
     model.to(device)
+    model_name = model.__class__.__name__
 
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
+    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
 
     loss_func = nn.NLLLoss()
+    loss_val = None
 
     # Used for early stopping, if enabled.
     best_loss_val = float("inf")
-    counter = None
-    best_model = None
+    counter = 15
 
     for epoch in range(n_epoch):
         # -------------------- TRAINING --------------------
@@ -103,30 +107,105 @@ def train_model(
         # Update the learning rate of the optimizer
         scheduler.step()
 
-        if epoch % log_interval == 0:
-            mean_loss_train = sum(losses_train) / len(losses_train)
-            mean_loss_val = sum(losses_val) / len(losses_val)
+        if epoch % 5 == 0:
+            loss_train = sum(losses_train) / len(losses_train)
+            loss_val = sum(losses_val) / len(losses_val)
             accuracy = 100.0 * correct / len(validation_loader.dataset)
             print(
-                f"Epoch: {epoch} Train-Loss: {mean_loss_train:.6f} "
-                f"Val-Loss: {mean_loss_val:.6f} "
+                f"Epoch: {epoch} Train-Loss: {loss_train:.6f} "
+                f"Val-Loss: {loss_val:.6f} "
                 f"Val-Accuracy: {accuracy:.2f} "
             )
 
-        if early_stopping and epoch > 10:
-            loss_val = sum(losses_val)
+        if early_stopping and epoch >= 10:
+            loss_val = sum(losses_val) / len(losses_val)
             if loss_val < best_loss_val:
                 accuracy = 100.0 * correct / len(validation_loader.dataset)
                 print(
-                    f"Validation loss improved in epoch {epoch}. Current accuracy: {accuracy:.2f}. Keeping model!"
+                    f"Improved validation loss to {loss_val:.6f} in epoch {epoch}."
+                    f" Current accuracy: {accuracy:.2f}. Saving model to disk!"
                 )
                 best_loss_val = loss_val
-                best_model = model
-                counter = 10
-            elif counter > 0:
-                counter -= 1
-            else:
+                torch.save(
+                    model.state_dict(),
+                    f"models/{model_name}.pt",
+                )
+                counter = 15
+            elif counter == 0:
                 print(f"Validation loss didnt improve further. Stopping training in epoch {epoch}!")
-                return best_model
+                return model, best_loss_val
 
-    return model
+            counter -= 1
+
+    return model, loss_val
+
+
+def optimize_hyperparams(
+    model: nn.Module,
+    learning_rates: List[float],
+    weight_decays: List[float],
+    step_sizes: List[int],
+    gammas: List[float],
+    to_mel: bool = False,
+):
+    """Optimize the hyperparameters of a model."""
+    grid_space = itertools.product(learning_rates, weight_decays, step_sizes, gammas)
+    size_grid_space = len(learning_rates) * len(weight_decays) * len(step_sizes) * len(gammas)
+
+    original_model = model
+    model_name = model.__class__.__name__
+
+    best_loss = float("inf")
+    best_model = None
+    best_params = None
+
+    # Removing old results file.
+    filename = f"logs/hyp_opt_{model_name}.txt"
+    try:
+        os.remove(filename)
+    except OSError:
+        pass
+
+    i = 0
+    for lr, weight_decay, step_size, gamma in grid_space:
+        i += 1
+        print(
+            f"\n-------------Training model with parameter combination {i}/{size_grid_space}. -------------"
+        )
+        # Copying the original model to avoid using weights from previous training runs.
+        model = copy.deepcopy(original_model)
+        trained_model, loss = train_model(
+            model, lr=lr, weight_decay=weight_decay, step_size=step_size, gamma=gamma, to_mel=to_mel
+        )
+
+        # Logging experiment results.
+        with open(f"{filename}", "a") as file:
+            file.write(
+                f"Iteration: {i}/{size_grid_space},"
+                f" Loss: {loss:.4f} for parameters: {lr}, {weight_decay}, {step_size}, {gamma}.\n"
+            )
+
+        if loss < best_loss:
+            best_loss = loss
+            best_model = trained_model
+            best_params = {
+                "lr": lr,
+                "weight_decay": weight_decay,
+                "step_size": step_size,
+                "gamma": gamma,
+            }
+            print(
+                f"\nNew best model found at iteration {i}/{size_grid_space} with loss: {best_loss:.6f} and params: {best_params}."
+            )
+
+    # Save best model to disk and include parameters in filename.
+    str_lr = str(best_params["lr"]).replace(".", "")
+    str_weight_decay = str(best_params["weight_decay"]).replace(".", "")
+    str_step_size = str(best_params["step_size"]).replace(".", "")
+    str_gamma = str(best_params["gamma"]).replace(".", "")
+
+    torch.save(best_model, f"models/{model_name}_{str_lr}_{str_weight_decay}_{str_step_size}_{str_gamma}.pt")
+    with open(f"{filename}", "a") as file:
+        file.write(f"Best parameters: {best_params}. Best loss: {best_loss}.\n")
+
+    return best_model, best_params
