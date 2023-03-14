@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 import torch
-from model_neural.conv1d_model import Conv1dModel, Conv1dMelModel
+from model_neural.conv1d_model import Conv1dMelModel, Conv1dModel
 
 
 class TestConv1dModel(TestCase):

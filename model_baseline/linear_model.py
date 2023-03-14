@@ -1,10 +1,10 @@
 import os
 
+import joblib
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
-import joblib
 
 classifier = make_pipeline(
     StandardScaler(),

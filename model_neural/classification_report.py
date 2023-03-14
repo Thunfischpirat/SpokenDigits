@@ -45,7 +45,9 @@ def make_heatmap(cm, title, save_path):
     plt.close()
 
 
-def eval_models(model: nn.Module, loader_names: List[str], device: torch.device, to_mel: bool = False):
+def eval_models(
+    model: nn.Module, loader_names: List[str], device: torch.device, to_mel: bool = False
+):
     """Evaluate a model on various splits of the MNIST audio dataset."""
 
     loaders = create_loaders(loader_names, to_mel)

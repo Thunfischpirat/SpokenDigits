@@ -11,8 +11,7 @@ from typing import List
 import pandas as pd
 import torch
 import torchaudio
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 base_dir = Path(__file__).parent.parent.parent
 annotations_dir = base_dir / "SDR_metadata.tsv"
@@ -64,8 +63,9 @@ def collate_audio(batch):
 
     return tensors, targets
 
+
 def create_loaders(loader_names: List[str], to_mel: bool = False):
-    """ Create a dictionary of PyTorch DataLoader objects for the MNIST audio dataset for each split of the data."""
+    """Create a dictionary of PyTorch DataLoader objects for the MNIST audio dataset for each split of the data."""
     loaders = dict(
         [
             (
