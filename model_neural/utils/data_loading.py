@@ -6,7 +6,7 @@
 
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 import torch
@@ -18,11 +18,32 @@ annotations_dir = base_dir / "SDR_metadata.tsv"
 
 
 class MNISTAudio(Dataset):
-    def __init__(self, annotations_dir, audio_dir, split="TRAIN", to_mel=False):
+    def __init__(
+        self,
+        annotations_dir: str,
+        audio_dir: str,
+        split: Union[str, List[str]] = "TRAIN",
+        to_mel: bool = False,
+    ):
+        """
+        Wrapper for MNIST audio dataset.
+
+        Args:
+            annotations_dir: Path to the annotations file.
+            audio_dir: Path to the audio directory.
+            split: Which split of the data to use. One of "TRAIN", "DEV", "TEST"
+                   or a set of speaker names such as ["george", "lucas"].
+            to_mel: Whether to convert the raw audio to a mel spectrogram first.
+        """
         metadata = pd.read_csv(annotations_dir, sep="\t", header=0, index_col="Unnamed: 0")
-        audio_labels = torch.tensor(metadata[metadata["split"] == split].label.values)
-        self.audio_labels = audio_labels
-        self.audio_names = metadata[metadata["split"] == split].file.values
+        if isinstance(split, str):
+            audio_labels = torch.tensor(metadata[metadata["split"] == split].label.values)
+            self.audio_labels = audio_labels
+            self.audio_names = metadata[metadata["split"] == split].file.values
+        else:
+            audio_labels = torch.tensor(metadata[metadata["speaker"].isin(split)].label.values)
+            self.audio_labels = audio_labels
+            self.audio_names = metadata[metadata["speaker"].isin(split)].file.values
         self.audio_dir = audio_dir
         self.to_mel = to_mel
 
@@ -64,8 +85,14 @@ def collate_audio(batch):
     return tensors, targets
 
 
-def create_loaders(loader_names: List[str], to_mel: bool = False):
-    """Create a dictionary of PyTorch DataLoader objects for the MNIST audio dataset for each split of the data."""
+def create_loaders(loader_names: Union[List[str], List[List[str]]], to_mel: bool):
+    """
+    Create a dictionary of PyTorch DataLoader objects for the MNIST audio dataset for each split of the data.
+
+    Args:
+        loader_names: A list of the splits or list of a list of speaker names to use.
+        to_mel: Whether to convert the raw audio to a mel spectrogram first.
+    """
     loaders = dict(
         [
             (
@@ -77,7 +104,7 @@ def create_loaders(loader_names: List[str], to_mel: bool = False):
                         split=split,
                         to_mel=to_mel,
                     ),
-                    batch_size=64,
+                    batch_size=32,
                     collate_fn=collate_audio,
                     shuffle=True,
                 ),
@@ -86,3 +113,10 @@ def create_loaders(loader_names: List[str], to_mel: bool = False):
         ]
     )
     return loaders
+
+if __name__ == "__main__":
+    min_length = float("inf")
+    for audio, label in MNISTAudio(annotations_dir, base_dir, split=['jackson', 'lucas', 'nicolas', 'yweweler', 'theo', "george"]):
+        if audio.shape[1] < min_length:
+            min_length = audio.shape[1]
+    print(min_length)
