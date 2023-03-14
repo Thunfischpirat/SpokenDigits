@@ -5,12 +5,16 @@
 """
 
 import os
+from pathlib import Path
+from typing import List
 
 import pandas as pd
 import torch
 import torchaudio
-from torch.nn.functional import one_hot
-from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, Dataset
+
+base_dir = Path(__file__).parent.parent.parent
+annotations_dir = base_dir / "SDR_metadata.tsv"
 
 
 class MNISTAudio(Dataset):
@@ -58,3 +62,27 @@ def collate_audio(batch):
     targets = torch.stack(targets)
 
     return tensors, targets
+
+
+def create_loaders(loader_names: List[str], to_mel: bool = False):
+    """Create a dictionary of PyTorch DataLoader objects for the MNIST audio dataset for each split of the data."""
+    loaders = dict(
+        [
+            (
+                split,
+                DataLoader(
+                    MNISTAudio(
+                        annotations_dir=annotations_dir,
+                        audio_dir=base_dir,
+                        split=split,
+                        to_mel=to_mel,
+                    ),
+                    batch_size=64,
+                    collate_fn=collate_audio,
+                    shuffle=True,
+                ),
+            )
+            for split in loader_names
+        ]
+    )
+    return loaders

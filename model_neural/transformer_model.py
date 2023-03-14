@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from model_neural.utils.helpers import count_parameters, train_model
+from model_neural.utils.helpers import (count_parameters, optimize_hyperparams,
+                                        train_model)
 
 
 class PositionalEncoding(nn.Module):
@@ -50,7 +50,7 @@ class ViTBlock(nn.Module):
         return x + self.mlp(self.ln2(x))
 
 
-class transformer_model(nn.Module):
+class TransformerModel(nn.Module):
     def __init__(
         self,
         patch_size=16,
@@ -85,17 +85,31 @@ class transformer_model(nn.Module):
         for block in self.blocks:
             x = block(x)
         x = self.head(x)[:, 0, :].unsqueeze(1)
-        return F.log_softmax(x, dim=2)
+        return x
 
 
 if __name__ == "__main__":
 
-    model = transformer_model()
+    model_name = "TransformerModel"
+    model = TransformerModel()
 
-    trained_model = train_model(model, n_epoch=100, lr=0.0001, early_stopping=True, to_mel=True)
+    to_mel = True
+    optimize_hp = False
+
+    if not optimize_hp:
+        trained_model, _ = train_model(
+            model, lr=0.0001, weight_decay=0.0001, step_size=15, gamma=0.01, to_mel=True
+        )
+    else:
+        trained_model, _ = optimize_hyperparams(
+            model,
+            learning_rates=[0.001, 0.0001],
+            weight_decays=[0.001, 0.0001],
+            step_sizes=[15, 20],
+            gammas=[0.01, 0.1],
+            to_mel=True,
+        )
 
     # Since we are using LazyLinear, we need to call the model once to initialize the weights.
     num_params = count_parameters(trained_model)
     print("Number of parameters: %s" % num_params)
-
-    torch.save(trained_model.state_dict(), "models/transformer_model.pt")

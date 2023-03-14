@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List
 
 import torch
+import torch.nn.functional as F
 from model_neural.utils.data_loading import MNISTAudio, collate_audio
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -96,8 +97,9 @@ def train_model(
                 target = target.to(device)
 
                 output = model(data)
+                output_sm = F.log_softmax(output, dim=2)
 
-                loss = loss_func(output.squeeze(), target)
+                loss = loss_func(output_sm.squeeze(), target)
 
                 pred = output.argmax(dim=2, keepdim=True).squeeze()
                 correct += pred.eq(target).sum().item()
@@ -204,7 +206,10 @@ def optimize_hyperparams(
     str_step_size = str(best_params["step_size"]).replace(".", "")
     str_gamma = str(best_params["gamma"]).replace(".", "")
 
-    torch.save(best_model, f"models/{model_name}_{str_lr}_{str_weight_decay}_{str_step_size}_{str_gamma}.pt")
+    torch.save(
+        best_model.state_dict(),
+        f"models/{model_name}_{str_lr}_{str_weight_decay}_{str_step_size}_{str_gamma}.pt",
+    )
     with open(f"{filename}", "a") as file:
         file.write(f"Best parameters: {best_params}. Best loss: {best_loss}.\n")
 

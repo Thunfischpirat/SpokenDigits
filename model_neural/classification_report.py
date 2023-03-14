@@ -1,22 +1,14 @@
 import os
-from pathlib import Path
+from typing import List
 
+import matplotlib.pyplot as plt
 import torch
 import torchmetrics as tm
-from typing import Dict
-import matplotlib.pyplot as plt
-
+from model_neural.utils.data_loading import create_loaders
 from torch import nn
 
-from model_neural.conv1d_model import Conv1dModel, Conv1dMelModel
-from model_neural.transformer_model import TransformerModel
-from torch.utils.data import DataLoader
 
-base_dir = Path(__file__).parent.parent
-annotations_dir = base_dir / "SDR_metadata.tsv"
-
-
-def classification_report(accuracy, *args):
+def classification_report(accuracy: torch.tensor, *args):
     """Creates a classification report for a model in form of a formatted string."""
     metrics = torch.vstack([*args]).t()
     report = "   ".join(f"{col}" for col in ["class", "precision", "recall", "f1-score"]) + "\n"
@@ -52,8 +44,14 @@ def make_heatmap(cm, title, save_path):
     plt.savefig(f"{save_path}.png")
     plt.close()
 
-def eval_models(model: nn.Module, loaders: Dict[str, DataLoader]):
+
+def eval_models(
+    model: nn.Module, loader_names: List[str], device: torch.device, to_mel: bool = False
+):
     """Evaluate a model on various splits of the MNIST audio dataset."""
+
+    loaders = create_loaders(loader_names, to_mel)
+
     confusion_matrix = tm.classification.MulticlassConfusionMatrix(num_classes=10)
     f1_score = tm.classification.MulticlassF1Score(num_classes=10, average="none")
     precision_metric = tm.classification.MulticlassPrecision(num_classes=10, average="none")
@@ -116,40 +114,24 @@ def eval_models(model: nn.Module, loaders: Dict[str, DataLoader]):
                 print(report_string)
                 file.write(report_string)
 
-    return report
-
 
 if __name__ == "__main__":
+    from model_neural.conv1d_model import Conv1dMelModel, Conv1dModel
+    from model_neural.transformer_model import TransformerModel
     from model_neural.utils.data_loading import MNISTAudio, collate_audio
-
-    to_mel = True
-    # This code creates a dictionary of PyTorch DataLoader objects for the MNIST audio dataset for each split of the data.
-    loaders = dict(
-        [
-            (
-                split,
-                DataLoader(
-                    MNISTAudio(
-                        annotations_dir=annotations_dir,
-                        audio_dir=base_dir,
-                        split=split,
-                        to_mel=to_mel,
-                    ),
-                    batch_size=64,
-                    collate_fn=collate_audio,
-                    shuffle=True,
-                ),
-            )
-            for split in ["TRAIN", "DEV", "TEST"]
-        ]
-    )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using: '{device}' as device for report.")
 
     model = TransformerModel()
-    model.load_state_dict(torch.load("../models/TransformerModel.pt"))
+    model.load_state_dict(torch.load("../models/TransformerModel_00001_00001_15_001.pt"))
     model.to(device)
     model.eval()
 
-    report = eval_models(model, loaders)
+    # Conv1dModel doesn't use mel-spectrogram, so we need to specify that.
+    if model.__class__.__name__ in ["TransformerModel", "Conv1dMelModel"]:
+        to_mel = True
+    else:
+        to_mel = False
+
+    report = eval_models(model, ["TRAIN", "DEV", "TEST"], device=device, to_mel=to_mel)
