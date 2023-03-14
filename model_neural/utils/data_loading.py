@@ -96,7 +96,8 @@ def create_loaders(loader_names: Union[List[str], List[List[str]]], to_mel: bool
     loaders = dict(
         [
             (
-                split,
+                # If speaker names are given: use concatenation of the first two letters of the speaker name as key.
+                split if isinstance(split, str) else "_".join([name[:2] for name in split]),
                 DataLoader(
                     MNISTAudio(
                         annotations_dir=annotations_dir,

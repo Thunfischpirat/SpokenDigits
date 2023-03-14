@@ -6,6 +6,7 @@ import torch
 import torchmetrics as tm
 from model_neural.utils.data_loading import create_loaders
 from torch import nn
+from datetime import datetime
 
 
 def classification_report(accuracy: torch.tensor, *args):
@@ -83,10 +84,10 @@ def eval_models(
     accuracy_metric.to(device)
 
     filename = f"logs/{model.__class__.__name__}_report.txt"
-    try:
-        os.remove(filename)
-    except OSError:
-        pass
+    with open(filename, "a") as file:
+        now = datetime.now()
+        current_time = now.strftime("%Y-%m-%d %H:%M")
+        file.write(f"\n------Writing report for evaluation run. Timestamp: {current_time}------\n")
 
     # https://discuss.pytorch.org/t/model-eval-vs-with-torch-no-grad/19615/2
     with torch.no_grad():
@@ -118,7 +119,7 @@ def eval_models(
 
             make_heatmap(
                 cm,
-                f"Confusion matrix {loader_name.lower()}-set",
+                f"Confusion matrix",
                 f"logs/{model.__class__.__name__}_cm_{loader_name.lower()}",
             )
 
