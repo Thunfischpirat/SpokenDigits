@@ -4,11 +4,13 @@ import os
 from pathlib import Path
 from typing import List
 
+import numpy as np
 import torch
 import torch.nn.functional as F
+import torchmetrics as tm
 from model_neural.utils.data_loading import MNISTAudio, collate_audio
 from torch import nn, optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, RandomSampler
 
 base_dir = Path(__file__).parent.parent.parent
 annotations_dir = base_dir / "SDR_metadata.tsv"
@@ -39,15 +41,15 @@ def get_data_loaders(batch_size: int = 64, to_mel: bool = False):
 
 
 def train_model(
-    model: nn.Module,
-    lr: float = 0.01,
-    weight_decay: float = 0.01,
-    step_size: int = 20,
-    gamma: float = 0.1,
-    n_epoch: int = 100,
-    batch_size: int = 32,
-    early_stopping: bool = True,
-    to_mel: bool = False,
+        model: nn.Module,
+        lr: float = 0.01,
+        weight_decay: float = 0.01,
+        step_size: int = 20,
+        gamma: float = 0.1,
+        n_epoch: int = 100,
+        batch_size: int = 32,
+        early_stopping: bool = True,
+        to_mel: bool = False,
 ):
     """Train a model on the MNIST audio dataset."""
 
@@ -143,12 +145,12 @@ def train_model(
 
 
 def optimize_hyperparams(
-    model: nn.Module,
-    learning_rates: List[float],
-    weight_decays: List[float],
-    step_sizes: List[int],
-    gammas: List[float],
-    to_mel: bool = False,
+        model: nn.Module,
+        learning_rates: List[float],
+        weight_decays: List[float],
+        step_sizes: List[int],
+        gammas: List[float],
+        to_mel: bool = False,
 ):
     """Optimize the hyperparameters of a model."""
     grid_space = itertools.product(learning_rates, weight_decays, step_sizes, gammas)
@@ -214,3 +216,38 @@ def optimize_hyperparams(
         file.write(f"Best parameters: {best_params}. Best loss: {best_loss}.\n")
 
     return best_model, best_params
+
+
+def test_statistical_significance(model: nn.Module, baseline: nn.Module, device: torch.device):
+    """Test for statistical significance between models w.r.t accuracy
+    :return: p-value"""
+    # Adapted from https://aclanthology.org/D12-1091.pdf
+    # Sample with replacement for val (DEV) set
+    ds = MNISTAudio(annotations_dir=annotations_dir, audio_dir=base_dir, split="DEV", to_mel=True)
+    n = ds.__len__()
+    sampler = RandomSampler(ds, replacement=True, num_samples=n)
+    dl = DataLoader(ds, sampler=sampler, batch_size=32)
+    s = 0
+    b = 10 ** 6
+    model_accuracy_metric = tm.classification.MulticlassAccuracy(num_classes=10)
+    model_accuracy_metric.to(device)
+    baseline_accuracy_metric = tm.classification.MulticlassAccuracy(num_classes=10)
+    baseline_accuracy_metric.to(device)
+    for _ in range(b):
+        with torch.no_grad():
+            for batch_idx, (data, target) in enumerate(dl):
+                data = data.to(device)
+                target = target.to(device)
+                model_output = model(data)
+                baseline_output = baseline(data)
+                model_pred = model_output.argmax(dim=2, keepdim=True).squeeze()
+                baseline_pred = baseline_output.argmax(dim=2, keepdim=True).squeeze()
+                model_accuracy_metric(model_pred, target)
+                baseline_accuracy_metric(baseline_pred, target)
+            model_accuracy = model_accuracy_metric.compute()
+            baseline_accuracy = baseline_accuracy_metric.compute()
+            model_accuracy_metric.reset()
+            baseline_accuracy_metric.reset()
+            if model_accuracy > baseline_accuracy:
+                s+=1
+    return s/b
