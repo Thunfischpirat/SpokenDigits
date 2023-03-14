@@ -164,6 +164,9 @@ def optimize_hyperparams(
     best_params = None
 
     # Removing old results file.
+    if not os.path.exists("./logs"):
+        os.mkdir("./logs")
+
     filename = f"logs/hyp_opt_{model_name}.txt"
     try:
         os.remove(filename)
@@ -183,7 +186,7 @@ def optimize_hyperparams(
         )
 
         # Logging experiment results.
-        with open(f"{filename}", "a") as file:
+        with open(f"{filename}", 'a') as file:
             file.write(
                 f"Iteration: {i}/{size_grid_space},"
                 f" Loss: {loss:.4f} for parameters: {lr}, {weight_decay}, {step_size}, {gamma}.\n"

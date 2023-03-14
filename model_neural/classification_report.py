@@ -64,6 +64,9 @@ def eval_models(
     recall_metric.to(device)
     accuracy_metric.to(device)
 
+    if not os.path.exists("../logs"):
+        os.mkdir("../logs")
+
     filename = f"../logs/{model.__class__.__name__}_report.txt"
     try:
         os.remove(filename)
@@ -98,6 +101,9 @@ def eval_models(
             recall_metric.reset()
             accuracy_metric.reset()
 
+            if not os.path.exists("../logs"):
+                os.mkdir("../logs")
+
             make_heatmap(
                 cm,
                 f"Confusion matrix {loader_name.lower()}-set",
@@ -124,7 +130,7 @@ if __name__ == "__main__":
     print(f"Using: '{device}' as device for report.")
 
     model = TransformerModel()
-    model.load_state_dict(torch.load("../models/TransformerModel_00001_00001_15_001.pt"))
+    model.load_state_dict(torch.load("./models/TransformerModel_00001_00001_15_001.pt", map_location=device))
     model.to(device)
     model.eval()
 
