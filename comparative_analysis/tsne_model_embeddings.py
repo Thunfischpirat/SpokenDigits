@@ -68,7 +68,7 @@ if __name__ == "__main__":
     print(f"Using: '{device}' as device for report.")
 
     model = Conv1dModel()
-    model.load_state_dict(torch.load("../model_neural/models/Conv1dModel_0002_0002_10_01.pt"))
+    model.load_state_dict(torch.load("../model_neural/models/Conv1dModel_0002_0002_10_01.pt", map_location=device))
     model.to(device)
     model.eval()
 
