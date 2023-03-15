@@ -115,9 +115,14 @@ def create_loaders(loader_names: Union[List[str], List[List[str]]], to_mel: bool
     )
     return loaders
 
+
 if __name__ == "__main__":
     min_length = float("inf")
-    for audio, label in MNISTAudio(annotations_dir, base_dir, split=['jackson', 'lucas', 'nicolas', 'yweweler', 'theo', "george"]):
+    for audio, label in MNISTAudio(
+        annotations_dir,
+        base_dir,
+        split=["jackson", "lucas", "nicolas", "yweweler", "theo", "george"],
+    ):
         if audio.shape[1] < min_length:
             min_length = audio.shape[1]
     print(min_length)

@@ -93,15 +93,22 @@ if __name__ == "__main__":
     model_name = "TransformerModel"
     model = TransformerModel()
 
-    train_set = ['george']
-    val_set = ['jackson', 'lucas', 'nicolas', 'yweweler', 'theo']
+    train_set = ["george"]
+    val_set = ["jackson", "lucas", "nicolas", "yweweler", "theo"]
 
     to_mel = True
     optimize_hp = False
 
     if not optimize_hp:
         trained_model, _ = train_model(
-            model, train_set, val_set, to_mel, lr=0.0001, weight_decay=0.0001, step_size=15, gamma=0.01
+            model,
+            train_set,
+            val_set,
+            to_mel,
+            lr=0.0001,
+            weight_decay=0.0001,
+            step_size=15,
+            gamma=0.01,
         )
     else:
         trained_model, _ = optimize_hyperparams(

@@ -22,7 +22,13 @@ class Conv1dModel(nn.Module):
     """Convolutional neural network for 1D data."""
 
     def __init__(
-        self, n_input=1, n_channel=32, n_output=10, initial_kernel_size=60, initial_stride=8, final_pool_size=4
+        self,
+        n_input=1,
+        n_channel=32,
+        n_output=10,
+        initial_kernel_size=60,
+        initial_stride=8,
+        final_pool_size=4,
     ):
         super().__init__()
         self.conv_block1 = conv1d_block(n_input, n_channel, initial_kernel_size, initial_stride)
@@ -68,21 +74,19 @@ class Conv1dMelModel(nn.Module):
 
 if __name__ == "__main__":
     # Based on https://pytorch.org/tutorials/intermediate/speech_command_classification_with_torchaudio_tutorial.html
-
     torch.manual_seed(32)
     from utils.helpers import (count_parameters, optimize_hyperparams,
                                train_model)
 
     to_mel = False
     optimize_hp = False
-    train_set = ['george']
-    val_set = ['jackson', 'lucas', 'nicolas', 'yweweler', 'theo']
+    train_set = ["george"]
+    val_set = ["jackson", "lucas", "nicolas", "yweweler", "theo"]
 
     if to_mel:
-        model_name = "Conv1dMelModel"
         model = Conv1dMelModel()
     else:
-        model_name = "Conv1dModel"
+        # Training with speaker data
         if isinstance(train_set, list):
             final_pool_size = 2
         else:

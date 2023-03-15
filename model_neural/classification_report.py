@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import List, Union
 
 import matplotlib.pyplot as plt
@@ -6,7 +7,6 @@ import torch
 import torchmetrics as tm
 from model_neural.utils.data_loading import create_loaders
 from torch import nn
-from datetime import datetime
 
 
 def classification_report(accuracy: torch.tensor, *args):
