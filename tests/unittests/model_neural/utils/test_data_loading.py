@@ -27,6 +27,25 @@ class TestMNISTAudio(TestCase):
         self.assertTrue(audio.shape[0] == 1)
         self.assertTrue(isinstance(label, torch.Tensor))
 
+    def test_mnist_audio_mel(self):
+        dataset = MNISTAudio(
+            annotations_dir=self.annotations_dir,
+            audio_dir=self.audio_dir,
+            split="TRAIN",
+            to_mel=True,
+        )
+        audio, label = dataset[0]
+        self.assertTrue(audio.shape[0] == 39)
+
+    def test_mnist_audio_speaker(self):
+        dataset = MNISTAudio(
+            annotations_dir=self.annotations_dir,
+            audio_dir=self.audio_dir,
+            split=["george", "lucas"],
+        )
+        audio, label = dataset[0]
+        self.assertTrue(audio.shape[0] == 1)
+
 
 class TestCollation(TestCase):
     def setUp(self):
