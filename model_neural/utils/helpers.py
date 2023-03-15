@@ -107,8 +107,9 @@ def train_model(
             target = target.to(device)
 
             output = model(data)
+            output_sm = F.log_softmax(output, dim=2)
 
-            loss = loss_func(output.squeeze(), target)
+            loss = loss_func(output_sm.squeeze(), target)
 
             optimizer.zero_grad()
             loss.backward()
