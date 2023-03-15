@@ -6,11 +6,12 @@
 
 import os
 from pathlib import Path
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import pandas as pd
 import torch
 import torchaudio
+from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 base_dir = Path(__file__).parent.parent.parent
@@ -24,6 +25,7 @@ class MNISTAudio(Dataset):
         audio_dir: str,
         split: Union[str, List[str]] = "TRAIN",
         to_mel: bool = False,
+        spec_transforms: List[nn.Module] = None,
     ):
         """
         Wrapper for MNIST audio dataset.
@@ -34,6 +36,7 @@ class MNISTAudio(Dataset):
             split: Which split of the data to use. One of "TRAIN", "DEV", "TEST"
                    or a set of speaker names such as ["george", "lucas"].
             to_mel: Whether to convert the raw audio to a mel spectrogram first.
+            spec_transforms: A list of spectrogram transforms.
         """
         metadata = pd.read_csv(annotations_dir, sep="\t", header=0, index_col="Unnamed: 0")
         if isinstance(split, str):
@@ -46,6 +49,7 @@ class MNISTAudio(Dataset):
             self.audio_names = metadata[metadata["speaker"].isin(split)].file.values
         self.audio_dir = audio_dir
         self.to_mel = to_mel
+        self.spec_transforms = spec_transforms
 
     def __len__(self):
         return len(self.audio_labels)
@@ -58,8 +62,15 @@ class MNISTAudio(Dataset):
                 sample_rate, n_fft=200, hop_length=80, n_mels=39
             )(audio)
             mel_log = 20 * torch.log(mel_spectrogram + 1e-9)
-            mel_normalized = mel_log - mel_log.mean(1, keepdim=True) / (mel_log.std(1, keepdim=True) + 1e-10)
-            audio = mel_normalized.squeeze(0)
+            mel_normalized = mel_log - mel_log.mean(1, keepdim=True) / (
+                mel_log.std(1, keepdim=True) + 1e-10
+            )
+            audio = mel_normalized
+            # Apply random transforms to the spectrogram
+            if self.spec_transforms is not None:
+                for transform in self.spec_transforms:
+                    audio = transform(audio)
+            audio = audio.squeeze(0)
         else:
             audio = audio - audio.mean() / (audio.std() + 1e-10)
         label = self.audio_labels[idx]

@@ -2,10 +2,11 @@ import copy
 import itertools
 import os
 from pathlib import Path
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import torch
 import torch.nn.functional as F
+import torchaudio
 from model_neural.utils.data_loading import MNISTAudio, collate_audio
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -23,6 +24,7 @@ def get_data_loaders(
     train_set: Union[str, List[str]],
     val_set: Union[str, List[str]],
     to_mel: bool = False,
+    spec_transforms: List[nn.Module] = None,
     batch_size: int = 64,
 ):
     """
@@ -32,10 +34,15 @@ def get_data_loaders(
         train_set: Name of the train set to use. Can be either a split or list of speakers.
         val_set: Name of the validation set to use.
         to_mel: Whether to convert the raw audio to a mel spectrogram first.
+        spec_transforms: A list of spectrogram transforms.
         batch_size: The batch size to use.
     """
     train_set = MNISTAudio(
-        annotations_dir=annotations_dir, audio_dir=base_dir, split=train_set, to_mel=to_mel
+        annotations_dir=annotations_dir,
+        audio_dir=base_dir,
+        split=train_set,
+        to_mel=to_mel,
+        spec_transforms=spec_transforms,
     )
     train_loader = DataLoader(
         train_set, batch_size=batch_size, collate_fn=collate_audio, shuffle=True
@@ -56,6 +63,7 @@ def train_model(
     train_set: Union[str, List[str]] = "TRAIN",
     val_set: Union[str, List[str]] = "DEV",
     to_mel: bool = False,
+    spec_transforms: List[nn.Module] = None,
     lr: float = 0.01,
     weight_decay: float = 0.01,
     step_size: int = 20,
@@ -71,6 +79,7 @@ def train_model(
         train_set: Name of the train set to use. Can be either a split or list of speakers.
         val_set: Name of the validation set to use.
         to_mel: Whether to convert the raw audio to a mel spectrogram first.
+        spec_transforms: A list of spectrogram transforms.
         lr: The learning rate to use.
         weight_decay: The weight decay to use.
         step_size: The step size to use for the learning rate scheduler.
@@ -80,7 +89,11 @@ def train_model(
     """
 
     train_loader, validation_loader = get_data_loaders(
-        train_set=train_set, val_set=val_set, to_mel=to_mel, batch_size=batch_size
+        train_set=train_set,
+        val_set=val_set,
+        to_mel=to_mel,
+        batch_size=batch_size,
+        spec_transforms=spec_transforms,
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -139,7 +152,6 @@ def train_model(
                 except RuntimeError:
                     print("Skipping batch due to small sample length.")
 
-
         # Update the learning rate of the optimizer
         scheduler.step()
 
@@ -181,6 +193,7 @@ def optimize_hyperparams(
     train_set: Union[str, List[str]],
     val_set: Union[str, List[str]],
     to_mel: bool,
+    spec_transforms: List[nn.Module],
     learning_rates: List[float],
     weight_decays: List[float],
     step_sizes: List[int],
@@ -194,6 +207,7 @@ def optimize_hyperparams(
         train_set: Name of the train set to use. Can be either a split or list of speakers.
         val_set: Name of the validation set to use.
         to_mel: Whether to convert the raw audio to a mel spectrogram first.
+        spec_transforms: A list of spectrogram transforms.
         learning_rates: List of learning rates to try.
         weight_decays: List of weight decays to try.
         step_sizes: List of step sizes to try.
@@ -225,7 +239,7 @@ def optimize_hyperparams(
         # Copying the original model to avoid using weights from previous training runs.
         model = copy.deepcopy(original_model)
         trained_model, loss = train_model(
-            model, train_set, val_set, to_mel, lr, weight_decay, step_size, gamma
+            model, train_set, val_set, to_mel, spec_transforms, lr, weight_decay, step_size, gamma
         )
 
         # Logging experiment results.

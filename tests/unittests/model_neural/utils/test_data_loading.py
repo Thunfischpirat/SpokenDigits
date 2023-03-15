@@ -2,6 +2,7 @@ from pathlib import Path
 from unittest import TestCase
 
 import torch
+import torchaudio
 from model_neural.utils.data_loading import MNISTAudio, collate_audio
 
 base_dir = Path(__file__).parent.parent.parent.parent.parent
@@ -45,6 +46,20 @@ class TestMNISTAudio(TestCase):
         )
         audio, label = dataset[0]
         self.assertTrue(audio.shape[0] == 1)
+
+    def test_spec_transforms(self):
+        dataset = MNISTAudio(
+            annotations_dir=self.annotations_dir,
+            audio_dir=self.audio_dir,
+            split="TRAIN",
+            to_mel=True,
+            spec_transforms=[
+                torchaudio.transforms.FrequencyMasking(15),
+                torchaudio.transforms.TimeMasking(35),
+            ],
+        )
+        audio, label = dataset[0]
+        self.assertTrue(audio.shape[0] == 39)
 
 
 class TestCollation(TestCase):
