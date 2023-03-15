@@ -57,7 +57,11 @@ class MNISTAudio(Dataset):
             mel_spectrogram = torchaudio.transforms.MelSpectrogram(
                 sample_rate, n_fft=200, hop_length=80, n_mels=39
             )(audio)
-            audio = mel_spectrogram.squeeze(0)
+            mel_log = 20 * torch.log(mel_spectrogram + 1e-9)
+            mel_normalized = mel_log - mel_log.mean(1, keepdim=True) / (mel_log.std(1, keepdim=True) + 1e-10)
+            audio = mel_normalized.squeeze(0)
+        else:
+            audio = audio - audio.mean() / (audio.std() + 1e-10)
         label = self.audio_labels[idx]
         return audio, label
 
