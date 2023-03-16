@@ -2,11 +2,10 @@ import copy
 import itertools
 import os
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import Callable, List, Tuple, Union
 
 import torch
 import torch.nn.functional as F
-import torchaudio
 from model_neural.utils.data_loading import MNISTAudio, collate_audio
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -24,6 +23,7 @@ def get_data_loaders(
     train_set: Union[str, List[str]],
     val_set: Union[str, List[str]],
     to_mel: bool = False,
+    audio_transforms: List[Tuple[Callable, float]] = None,
     spec_transforms: List[nn.Module] = None,
     batch_size: int = 64,
 ):
@@ -34,6 +34,7 @@ def get_data_loaders(
         train_set: Name of the train set to use. Can be either a split or list of speakers.
         val_set: Name of the validation set to use.
         to_mel: Whether to convert the raw audio to a mel spectrogram first.
+        audio_transforms: A list of raw audio transforms with execution probability.
         spec_transforms: A list of spectrogram transforms.
         batch_size: The batch size to use.
     """
@@ -42,6 +43,7 @@ def get_data_loaders(
         audio_dir=base_dir,
         split=train_set,
         to_mel=to_mel,
+        audio_transforms=audio_transforms,
         spec_transforms=spec_transforms,
     )
     train_loader = DataLoader(
@@ -63,12 +65,14 @@ def train_model(
     train_set: Union[str, List[str]] = "TRAIN",
     val_set: Union[str, List[str]] = "DEV",
     to_mel: bool = False,
+    audio_transforms: List[Tuple[Callable, float]] = None,
     spec_transforms: List[nn.Module] = None,
     lr: float = 0.01,
     weight_decay: float = 0.01,
     step_size: int = 20,
     gamma: float = 0.1,
     batch_size: int = 32,
+    label_smoothing: float = 0.0,
     patience: int = 20,
 ):
     """
@@ -79,20 +83,23 @@ def train_model(
         train_set: Name of the train set to use. Can be either a split or list of speakers.
         val_set: Name of the validation set to use.
         to_mel: Whether to convert the raw audio to a mel spectrogram first.
+        audio_transforms: A list of raw audio transforms with execution probability.
         spec_transforms: A list of spectrogram transforms.
         lr: The learning rate to use.
         weight_decay: The weight decay to use.
         step_size: The step size to use for the learning rate scheduler.
         gamma: The gamma to use for the learning rate scheduler.
         batch_size: The batch size to use.
+        label_smoothing: The label smoothing to use.
         patience: The patience to use for early stopping.
     """
-
+    torch.manual_seed(32)
     train_loader, validation_loader = get_data_loaders(
         train_set=train_set,
         val_set=val_set,
         to_mel=to_mel,
         batch_size=batch_size,
+        audio_transforms=audio_transforms,
         spec_transforms=spec_transforms,
     )
 
@@ -105,7 +112,7 @@ def train_model(
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
 
-    loss_func = nn.NLLLoss()
+    loss_func = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
     loss_val = None
 
     # Used for early stopping, if enabled.
@@ -121,9 +128,9 @@ def train_model(
             target = target.to(device)
 
             output = model(data)
-            output_sm = F.log_softmax(output, dim=2)
+            # output_sm = F.log_softmax(output, dim=2)
 
-            loss = loss_func(output_sm.squeeze(), target)
+            loss = loss_func(output.squeeze(), target)
 
             optimizer.zero_grad()
             loss.backward()
@@ -193,6 +200,7 @@ def optimize_hyperparams(
     train_set: Union[str, List[str]],
     val_set: Union[str, List[str]],
     to_mel: bool,
+    audio_transforms: List[Tuple[Callable, float]],
     spec_transforms: List[nn.Module],
     learning_rates: List[float],
     weight_decays: List[float],
@@ -207,6 +215,7 @@ def optimize_hyperparams(
         train_set: Name of the train set to use. Can be either a split or list of speakers.
         val_set: Name of the validation set to use.
         to_mel: Whether to convert the raw audio to a mel spectrogram first.
+        audio_transforms: A list of raw audio transforms with execution probability.
         spec_transforms: A list of spectrogram transforms.
         learning_rates: List of learning rates to try.
         weight_decays: List of weight decays to try.
@@ -239,7 +248,16 @@ def optimize_hyperparams(
         # Copying the original model to avoid using weights from previous training runs.
         model = copy.deepcopy(original_model)
         trained_model, loss = train_model(
-            model, train_set, val_set, to_mel, spec_transforms, lr, weight_decay, step_size, gamma
+            model,
+            train_set,
+            val_set,
+            to_mel,
+            audio_transforms,
+            spec_transforms,
+            lr,
+            weight_decay,
+            step_size,
+            gamma,
         )
 
         # Logging experiment results.

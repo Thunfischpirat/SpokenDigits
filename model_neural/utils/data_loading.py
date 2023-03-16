@@ -6,7 +6,7 @@
 
 import os
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Callable
 
 import pandas as pd
 import torch
@@ -25,7 +25,8 @@ class MNISTAudio(Dataset):
         audio_dir: str,
         split: Union[str, List[str]] = "TRAIN",
         to_mel: bool = False,
-        spec_transforms: List[nn.Module] = None,
+        audio_transforms: List[Tuple[Callable, float]] = None,
+        spec_transforms: List[nn.Module] = None
     ):
         """
         Wrapper for MNIST audio dataset.
@@ -36,7 +37,10 @@ class MNISTAudio(Dataset):
             split: Which split of the data to use. One of "TRAIN", "DEV", "TEST"
                    or a set of speaker names such as ["george", "lucas"].
             to_mel: Whether to convert the raw audio to a mel spectrogram first.
-            spec_transforms: A list of spectrogram transforms.
+            audio_transforms: A list of tuples of functions from torchaudio.functional to perform raw audio transforms
+                                with execution probability. Example: [(torchaudio.functional.contrast, 0.5)]
+            spec_transforms: A list of spectrogram transforms from torchaudio.transforms.
+                             Example: [torchaudio.transforms.FrequencyMasking(freq_mask_param=15)]
         """
         metadata = pd.read_csv(annotations_dir, sep="\t", header=0, index_col="Unnamed: 0")
         if isinstance(split, str):
@@ -49,6 +53,7 @@ class MNISTAudio(Dataset):
             self.audio_names = metadata[metadata["speaker"].isin(split)].file.values
         self.audio_dir = audio_dir
         self.to_mel = to_mel
+        self.audio_transforms = audio_transforms
         self.spec_transforms = spec_transforms
 
     def __len__(self):
@@ -57,6 +62,10 @@ class MNISTAudio(Dataset):
     def __getitem__(self, idx):
         audio_path = os.path.join(self.audio_dir, self.audio_names[idx])
         audio, sample_rate = torchaudio.load(audio_path)
+        if self.audio_transforms is not None:
+            for transform, exec_prob in self.audio_transforms:
+                if torch.rand(1) < exec_prob:
+                    audio = transform(audio)
         if self.to_mel:
             mel_spectrogram = torchaudio.transforms.MelSpectrogram(
                 sample_rate, n_fft=200, hop_length=80, n_mels=39
