@@ -1,5 +1,6 @@
 import os
-from typing import List
+from datetime import datetime
+from typing import List, Union
 
 import matplotlib.pyplot as plt
 import torch
@@ -21,8 +22,15 @@ def classification_report(accuracy: torch.tensor, *args):
     return report
 
 
-def make_heatmap(cm, title, save_path):
-    """Creates a heatmap of the confusion matrix."""
+def make_heatmap(cm: torch.tensor, title: str, save_path: str):
+    """
+    Creates a heatmap of the confusion matrix.
+
+    Args:
+        cm: Confusion matrix.
+        title: Title of the plot.
+        save_path: Path to save the plot to.
+    """
     fig, ax = plt.subplots()
     cm = cm.cpu()
     img = ax.imshow(cm, cmap="YlOrRd")
@@ -46,9 +54,20 @@ def make_heatmap(cm, title, save_path):
 
 
 def eval_models(
-    model: nn.Module, loader_names: List[str], device: torch.device, to_mel: bool = False
+    model: nn.Module,
+    loader_names: Union[List[str], List[List[str]]],
+    device: torch.device,
+    to_mel: bool = False,
 ):
-    """Evaluate a model on various splits of the MNIST audio dataset."""
+    """
+    Evaluate a model on various splits of the MNIST audio dataset.
+
+    Args:
+        model: Model to evaluate.
+        loader_names: List of splits or list of lists of speakers to evaluate on.
+        device: Device to evaluate on.
+        to_mel: Whether to convert the audio to mel spectrograms.
+    """
 
     loaders = create_loaders(loader_names, to_mel)
 
@@ -68,10 +87,10 @@ def eval_models(
         os.mkdir("../logs")
 
     filename = f"../logs/{model.__class__.__name__}_report.txt"
-    try:
-        os.remove(filename)
-    except OSError:
-        pass
+    with open(filename, "a") as file:
+        now = datetime.now()
+        current_time = now.strftime("%Y-%m-%d %H:%M")
+        file.write(f"\n------Writing report for evaluation run. Timestamp: {current_time}------\n")
 
     # https://discuss.pytorch.org/t/model-eval-vs-with-torch-no-grad/19615/2
     with torch.no_grad():
@@ -106,8 +125,8 @@ def eval_models(
 
             make_heatmap(
                 cm,
-                f"Confusion matrix {loader_name.lower()}-set",
-                f"../logs/{model.__class__.__name__}_cm_{loader_name.lower()}",
+                f"Confusion matrix",
+                f"logs/{model.__class__.__name__}_cm_{loader_name.lower()}",
             )
 
             with open(filename, "a") as file:
@@ -131,6 +150,7 @@ if __name__ == "__main__":
 
     model = TransformerModel()
     model.load_state_dict(torch.load("./models/TransformerModel_00001_00001_15_001.pt", map_location=device))
+
     model.to(device)
     model.eval()
 
