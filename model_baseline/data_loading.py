@@ -48,7 +48,7 @@ def downsample_spectrogram(spectrogram, num_frames):
 
     for section in range(num_frames):
         spectrogram_downsampled[:, section] = np.mean(
-            spectrogram[:, section * window_size : (section + 1) * window_size], axis=1
+            spectrogram[:, section * window_size: (section + 1) * window_size], axis=1
         )
 
     spectrogram_downsampled = np.reshape(spectrogram_downsampled, (1, -1))
