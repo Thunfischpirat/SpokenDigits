@@ -6,7 +6,9 @@ from typing import Callable, List, Tuple, Union
 
 import torch
 import torch.nn.functional as F
+
 from model_neural.utils.data_loading import MNISTAudio, collate_audio, collate_contrastive
+
 from torch import nn, optim
 from torch.utils.data import DataLoader
 
@@ -262,6 +264,9 @@ def optimize_hyperparams(
     best_params = None
 
     # Removing old results file.
+    if not os.path.exists("./logs"):
+        os.mkdir("./logs")
+
     filename = f"logs/hyp_opt_{model_name}.txt"
     try:
         os.remove(filename)
@@ -290,7 +295,7 @@ def optimize_hyperparams(
         )
 
         # Logging experiment results.
-        with open(f"{filename}", "a") as file:
+        with open(f"{filename}", 'a') as file:
             file.write(
                 f"Iteration: {i}/{size_grid_space},"
                 f" Loss: {loss:.4f} for parameters: {lr}, {weight_decay}, {step_size}, {gamma}.\n"
