@@ -8,14 +8,15 @@ from sklearn.manifold import TSNE
 from torch import nn
 
 
-def tsne_model(model: nn.Module, device: torch.device, to_mel: bool = False, split: str = "TRAIN"):
+def tsne_model(model: nn.Module, device: torch.device, n_output: int = 10, to_mel: bool = False, split: str = "TRAIN"):
     """Create tsne embedding of output of model applied to given data-split."""
 
-    loader = create_loaders([split], to_mel=to_mel)[split]
+    # Get data loader for given split.
+    loader = list(create_loaders([split], to_mel=to_mel).values())[0]
 
     targets = torch.empty(0).to(device)
     # Output shape is (batch_size, 1, 10).
-    outputs = torch.empty(0, 1, 10).to(device)
+    outputs = torch.empty(0, 1, n_output).to(device)
 
     with torch.no_grad():
         for batch_idx, (data, target) in enumerate(loader):
@@ -29,7 +30,7 @@ def tsne_model(model: nn.Module, device: torch.device, to_mel: bool = False, spl
 
     # Apply tsne to output of model.
     tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
-    tsne_embedding = tsne.fit_transform(outputs.view(-1, 10).cpu().numpy())
+    tsne_embedding = tsne.fit_transform(outputs.view(-1, n_output).cpu().numpy())
     labels = targets.view(-1).cpu().numpy()
     return tsne_embedding, labels
 
@@ -72,14 +73,17 @@ def plot_tsne(embeddings: np.ndarray, labels: np.ndarray, filename: str = None):
 
 
 if __name__ == "__main__":
-    from model_neural.conv1d_model import Conv1dModel
+    from model_neural.conv1d_model import Conv1dModel, Conv1dMelModel
     from model_neural.transformer_model import TransformerModel
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using: '{device}' as device for report.")
 
-    model = Conv1dModel()
-    model.load_state_dict(torch.load("../model_neural/models/Conv1dModel_0002_0002_10_01.pt", map_location=device))
+
+    n_output = 10
+    model = Conv1dMelModel(n_output=n_output)
+    model.load_state_dict(torch.load("../model_neural/models/Conv1dMelModel.pt"))
+
     model.to(device)
     model.eval()
 
@@ -88,5 +92,5 @@ if __name__ == "__main__":
     else:
         to_mel = False
 
-    tsne_embedding, labels = tsne_model(model, device, to_mel, split="DEV")
+    tsne_embedding, labels = tsne_model(model, device, n_output, to_mel, split=["george"])
     plot_tsne(tsne_embedding, labels)

@@ -26,7 +26,7 @@ class MNISTAudio(Dataset):
         split: Union[str, List[str]] = "TRAIN",
         to_mel: bool = False,
         audio_transforms: List[Tuple[Callable, float]] = None,
-        spec_transforms: List[nn.Module] = None
+        spec_transforms: nn.Module = None
     ):
         """
         Wrapper for MNIST audio dataset.
@@ -39,8 +39,8 @@ class MNISTAudio(Dataset):
             to_mel: Whether to convert the raw audio to a mel spectrogram first.
             audio_transforms: A list of tuples of functions from torchaudio.functional to perform raw audio transforms
                                 with execution probability. Example: [(torchaudio.functional.contrast, 0.5)]
-            spec_transforms: A list of spectrogram transforms from torchaudio.transforms.
-                             Example: [torchaudio.transforms.FrequencyMasking(freq_mask_param=15)]
+            spec_transforms: A sequence of spectrogram transforms from torchaudio.transforms.
+                             Example: torchaudio.transforms.FrequencyMasking(freq_mask_param=15)
         """
         metadata = pd.read_csv(annotations_dir, sep="\t", header=0, index_col="Unnamed: 0")
         if isinstance(split, str):
@@ -77,8 +77,7 @@ class MNISTAudio(Dataset):
             audio = mel_normalized
             # Apply random transforms to the spectrogram
             if self.spec_transforms is not None:
-                for transform in self.spec_transforms:
-                    audio = transform(audio)
+                    audio = self.spec_transforms(audio)
             audio = audio.squeeze(0)
         else:
             audio = audio - audio.mean() / (audio.std() + 1e-10)
@@ -107,6 +106,24 @@ def collate_audio(batch):
     targets = torch.stack(targets)
 
     return tensors, targets
+
+def collate_contrastive(batch):
+    """Collate a batch of audio samples generated for contrastive loss based training."""
+    tensors, labels = [], []
+
+    # Gather in lists, and encode labels as indices
+    for waveform, _ in batch:
+        tensors += [waveform]
+        labels += [waveform]
+
+    # Group the list of tensors into a batched tensor
+    max_length = max([t.shape[2] for t in tensors])
+    padded_tensors = [torch.nn.functional.pad(t, (0, max_length - t.shape[2])) for t in tensors]
+    tensors = torch.cat(padded_tensors)
+    labels = torch.cat(labels)
+
+
+    return tensors, labels
 
 
 def create_loaders(loader_names: Union[List[str], List[List[str]]], to_mel: bool):
@@ -139,8 +156,18 @@ def create_loaders(loader_names: Union[List[str], List[List[str]]], to_mel: bool
     )
     return loaders
 
+class ContrastiveTransformations():
+
+    def __init__(self, base_transforms, n_views=2):
+        self.base_transforms = base_transforms
+        self.n_views = n_views
+
+    def __call__(self, x):
+        return torch.cat([self.base_transforms(x) for _ in range(self.n_views)])
+
 
 if __name__ == "__main__":
+    # Determine the minimum length of the audio files
     min_length = float("inf")
     for audio, label in MNISTAudio(
         annotations_dir,
@@ -150,3 +177,6 @@ if __name__ == "__main__":
         if audio.shape[1] < min_length:
             min_length = audio.shape[1]
     print(min_length)
+
+
+
