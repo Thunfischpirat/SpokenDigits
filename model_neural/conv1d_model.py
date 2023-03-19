@@ -78,10 +78,7 @@ class Conv1dMelModel(nn.Module):
         )
         self.conv_block2 = conv1d_block(n_channel, n_channel, pool_size=1)
         self.conv_block3 = conv1d_block(n_channel, 2 * n_channel, pool_size=1)
-        if n_output is None:
-            self.fc1 = nn.Identity()
-        else:
-            self.fc1 = nn.Linear(2 * n_channel, n_output)
+        self.fc1 = nn.Linear(2 * n_channel, n_output)
 
     def forward(self, x):
         x = self.conv_block1(x)

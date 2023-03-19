@@ -3,7 +3,9 @@ from unittest import TestCase
 
 import torch
 import torchaudio
-from model_neural.utils.data_loading import MNISTAudio, collate_audio
+from torch import nn
+
+from model_neural.utils.data_loading import MNISTAudio, collate_audio, ContrastiveTransformations
 
 base_dir = Path(__file__).parent.parent.parent.parent.parent
 
@@ -53,13 +55,30 @@ class TestMNISTAudio(TestCase):
             audio_dir=self.audio_dir,
             split="TRAIN",
             to_mel=True,
-            spec_transforms=[
-                torchaudio.transforms.FrequencyMasking(15),
-                torchaudio.transforms.TimeMasking(35),
-            ],
+            spec_transforms=nn.Sequential(
+                torchaudio.transforms.FrequencyMasking(freq_mask_param=15),
+                torchaudio.transforms.TimeMasking(time_mask_param=35),
+            ),
         )
         audio, label = dataset[0]
         self.assertTrue(audio.shape[0] == 39)
+
+    def test_contrastive_transforms(self):
+        transforms = nn.Sequential(
+            torchaudio.transforms.FrequencyMasking(freq_mask_param=15),
+            torchaudio.transforms.TimeMasking(time_mask_param=35),
+        )
+        spec_transforms = ContrastiveTransformations(transforms, n_views=2)
+        dataset = MNISTAudio(
+            annotations_dir=self.annotations_dir,
+            audio_dir=self.audio_dir,
+            split="TRAIN",
+            to_mel=True,
+            spec_transforms=spec_transforms,
+        )
+        audio, label = dataset[0]
+        self.assertTrue(audio.shape[0] == 2)
+        self.assertTrue(audio.shape[1] == 39)
 
 
 class TestCollation(TestCase):
