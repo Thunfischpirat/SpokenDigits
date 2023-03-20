@@ -97,7 +97,7 @@ if __name__ == "__main__":
     val_set = ["jackson", "lucas", "nicolas", "yweweler", "theo"]
 
     to_mel = True
-    optimize_hp = False
+    optimize_hp = True
 
     if not optimize_hp:
         trained_model, _ = train_model(
@@ -113,6 +113,10 @@ if __name__ == "__main__":
     else:
         trained_model, _ = optimize_hyperparams(
             model,
+            train_set,
+            val_set,
+            audio_transforms=None,
+            spec_transforms=None,
             learning_rates=[0.001, 0.0001],
             weight_decays=[0.001, 0.0001],
             step_sizes=[15, 20],
