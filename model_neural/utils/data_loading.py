@@ -112,15 +112,15 @@ def collate_contrastive(batch):
     tensors, labels = [], []
 
     # Gather in lists, and encode labels as indices
-    for waveform, _ in batch:
+    for waveform, label in batch:
         tensors += [waveform]
-        labels += [waveform]
+        labels += [label]
 
     # Group the list of tensors into a batched tensor
     max_length = max([t.shape[2] for t in tensors])
     padded_tensors = [torch.nn.functional.pad(t, (0, max_length - t.shape[2])) for t in tensors]
     tensors = torch.cat(padded_tensors)
-    labels = torch.cat(labels)
+    labels = torch.stack(labels)
 
 
     return tensors, labels

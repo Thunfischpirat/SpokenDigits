@@ -2,8 +2,6 @@ import torch
 import torchaudio
 from torch import nn
 
-import torch.nn.functional as F
-
 from model_neural.conv1d_model import Conv1dMelModel
 from model_neural.utils.data_loading import ContrastiveTransformations
 from model_neural.utils.helpers import contrastive_train
