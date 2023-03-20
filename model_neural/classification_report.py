@@ -145,19 +145,24 @@ if __name__ == "__main__":
     from model_neural.transformer_model import TransformerModel
     from model_neural.utils.data_loading import MNISTAudio, collate_audio
 
+    models = [Conv1dMelModel, TransformerModel]
+    states = ['Conv1dMelModel_0008_0001_20_02.pt', 'TransformerModel.pt']
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using: '{device}' as device for report.")
 
-    model = TransformerModel()
-    model.load_state_dict(torch.load("./models/TransformerModel_00001_00001_15_001.pt", map_location=device))
+    for m, s in zip(models, states):
+        model = m()
+        model.load_state_dict(torch.load("./models/" + s, map_location=device))
 
-    model.to(device)
-    model.eval()
+        model.to(device)
+        model.eval()
 
-    # Conv1dModel doesn't use mel-spectrogram, so we need to specify that.
-    if model.__class__.__name__ in ["TransformerModel", "Conv1dMelModel"]:
-        to_mel = True
-    else:
-        to_mel = False
+        # Conv1dModel doesn't use mel-spectrogram, so we need to specify that.
+        if model.__class__.__name__ in ["TransformerModel", "Conv1dMelModel"]:
+            to_mel = True
+        else:
+            to_mel = False
 
-    report = eval_models(model, ["TRAIN", "DEV", "TEST"], device=device, to_mel=to_mel)
+        print(f"------------------- {model.__class__.__name__} report -------------------")
+        eval_models(model, ["TRAIN", "DEV", "TEST"], device=device, to_mel=to_mel)

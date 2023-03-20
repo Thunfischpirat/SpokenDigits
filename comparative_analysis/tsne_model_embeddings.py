@@ -1,3 +1,4 @@
+import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -35,12 +36,12 @@ def tsne_model(model: nn.Module, device: torch.device, n_output: int = 10, to_me
     return tsne_embedding, labels
 
 
-def tsne_linear(model, num_mels, num_frames, to_mel: bool = False, split: str = "TRAIN"):
+def tsne_linear(model, num_mels=13, num_frames=10, split: str = "TRAIN"):
     """Create tsne embedding of output of linear model applied to given data-split."""
     features, labels = create_features(split, num_mels, num_frames)
-    preds = model.predict(features)
+    preds = model.predict_proba(features)
     tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
-    tsne_embedding = tsne.fit_transform(preds)
+    tsne_embedding = tsne.fit_transform(preds.reshape(-1, 10))
     return tsne_embedding, labels
 
 
@@ -76,21 +77,30 @@ if __name__ == "__main__":
     from model_neural.conv1d_model import Conv1dModel, Conv1dMelModel
     from model_neural.transformer_model import TransformerModel
 
+    models = [Conv1dMelModel, TransformerModel]
+    states = ["../model_neural/models/Conv1dMelModel_0008_0001_20_02.pt",
+              "../model_neural/models/TransformerModel_00001_00001_15_001.pt"]
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using: '{device}' as device for report.")
 
-
     n_output = 10
-    model = Conv1dMelModel(n_output=n_output)
-    model.load_state_dict(torch.load("../model_neural/models/Conv1dMelModel.pt"))
 
-    model.to(device)
-    model.eval()
+    for m, s in zip(models, states):
+        model = m()
+        model.load_state_dict(torch.load(s, map_location=device))
 
-    if model.__class__.__name__ in ["TransformerModel", "Conv1dMelModel"]:
-        to_mel = True
-    else:
-        to_mel = False
+        model.to(device)
+        model.eval()
 
-    tsne_embedding, labels = tsne_model(model, device, n_output, to_mel, split=["george"])
+        if model.__class__.__name__ in ["TransformerModel", "Conv1dMelModel"]:
+            to_mel = True
+        else:
+            to_mel = False
+
+        tsne_embedding, labels = tsne_model(model, device, n_output, to_mel, split=["george"])
+        plot_tsne(tsne_embedding, labels)
+
+    model = joblib.load("../model_baseline/linear_model.joblib")
+    tsne_embedding, labels = tsne_linear(model, split="TRAIN")
     plot_tsne(tsne_embedding, labels)
