@@ -25,6 +25,7 @@ class MNISTAudio(Dataset):
         audio_dir: str,
         split: Union[str, List[str]] = "TRAIN",
         to_mel: bool = False,
+        n_mels: int = 39,
         audio_transforms: List[Tuple[Callable, float]] = None,
         spec_transforms: nn.Module = None
     ):
@@ -53,6 +54,7 @@ class MNISTAudio(Dataset):
             self.audio_names = metadata[metadata["speaker"].isin(split)].file.values
         self.audio_dir = audio_dir
         self.to_mel = to_mel
+        self.n_mels = n_mels
         self.audio_transforms = audio_transforms
         self.spec_transforms = spec_transforms
 
@@ -68,7 +70,7 @@ class MNISTAudio(Dataset):
                     audio = transform(audio)
         if self.to_mel:
             mel_spectrogram = torchaudio.transforms.MelSpectrogram(
-                sample_rate, n_fft=200, hop_length=80, n_mels=39
+                sample_rate, n_fft=200, hop_length=80, n_mels=self.n_mels
             )(audio)
             mel_log = 20 * torch.log(mel_spectrogram + 1e-9)
             mel_normalized = mel_log - mel_log.mean(1, keepdim=True) / (
