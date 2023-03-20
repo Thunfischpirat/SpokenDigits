@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+
+from model_baseline.data_loading import create_features
 from model_neural.utils.data_loading import create_loaders
 from sklearn.manifold import TSNE
 from torch import nn
@@ -30,6 +32,15 @@ def tsne_model(model: nn.Module, device: torch.device, n_output: int = 10, to_me
     tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
     tsne_embedding = tsne.fit_transform(outputs.view(-1, n_output).cpu().numpy())
     labels = targets.view(-1).cpu().numpy()
+    return tsne_embedding, labels
+
+
+def tsne_linear(model, num_mels, num_frames, to_mel: bool = False, split: str = "TRAIN"):
+    """Create tsne embedding of output of linear model applied to given data-split."""
+    features, labels = create_features(split, num_mels, num_frames)
+    preds = model.predict(features)
+    tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
+    tsne_embedding = tsne.fit_transform(preds)
     return tsne_embedding, labels
 
 
@@ -68,9 +79,11 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using: '{device}' as device for report.")
 
+
     n_output = 10
     model = Conv1dMelModel(n_output=n_output)
     model.load_state_dict(torch.load("../model_neural/models/Conv1dMelModel.pt"))
+
     model.to(device)
     model.eval()
 

@@ -83,7 +83,10 @@ def eval_models(
     recall_metric.to(device)
     accuracy_metric.to(device)
 
-    filename = f"logs/{model.__class__.__name__}_report.txt"
+    if not os.path.exists("../logs"):
+        os.mkdir("../logs")
+
+    filename = f"../logs/{model.__class__.__name__}_report.txt"
     with open(filename, "a") as file:
         now = datetime.now()
         current_time = now.strftime("%Y-%m-%d %H:%M")
@@ -117,6 +120,9 @@ def eval_models(
             recall_metric.reset()
             accuracy_metric.reset()
 
+            if not os.path.exists("../logs"):
+                os.mkdir("../logs")
+
             make_heatmap(
                 cm,
                 f"Confusion matrix",
@@ -142,8 +148,9 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using: '{device}' as device for report.")
 
-    model = Conv1dModel()
-    model.load_state_dict(torch.load("models/Conv1dModel_0002_0002_10_01.pt"))
+    model = TransformerModel()
+    model.load_state_dict(torch.load("./models/TransformerModel_00001_00001_15_001.pt", map_location=device))
+
     model.to(device)
     model.eval()
 
