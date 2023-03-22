@@ -98,13 +98,17 @@ if __name__ == "__main__":
     optimize_hp = False
     train_set = "TRAIN"
     val_set = "DEV"
+    train_set = ["george"]
+    val_set = ["jackson", "lucas", "nicolas", "yweweler", "theo"]
 
     if to_mel:
         model = Conv1dMelModel()
         audio_transforms = [
             (torchaudio.functional.contrast, 0.5),
-            (torchaudio.functional.dither, 0.5),
+            # (torchaudio.functional.dither, 0.5),
         ]
+        audio_transforms = None
+        spec_transforms = torchaudio.transforms.FrequencyMasking(freq_mask_param=15)
         spec_transforms = None
     else:
         # Expect error when training with speaker based datasets due to small input size for some samples.

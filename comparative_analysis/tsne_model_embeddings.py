@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     models = [Conv1dMelModel, TransformerModel]
     states = ["../model_neural/models/Conv1dMelModel_0008_0001_20_02.pt",
-              "../model_neural/models/TransformerModel_00001_00001_15_001.pt"]
+              "../model_neural/models/TransformerModel.pt"]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using: '{device}' as device for report.")

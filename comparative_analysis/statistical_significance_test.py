@@ -1,13 +1,10 @@
 import joblib
-import numpy
-import numpy as np
 import torch
-from torch import nn
 import torchmetrics as tm
 from torch.utils.data import RandomSampler, DataLoader
 
 from model_baseline.data_loading import downsample_spectrogram
-from model_neural.utils.data_loading import MNISTAudio, create_loaders, collate_audio
+from model_neural.utils.data_loading import MNISTAudio, collate_audio
 from model_neural.utils.helpers import annotations_dir, base_dir
 
 
@@ -28,6 +25,7 @@ def test_statistical_significance(model, baseline, device: torch.device):
     baseline_accuracy_metric = tm.classification.MulticlassAccuracy(num_classes=10)
     baseline_accuracy_metric.to(device)
 
+    print(f"Sampling {b} times...")
     for i in range(b):
         sampler = RandomSampler(ds39, replacement=True, num_samples=ds39.__len__())
         dl39 = DataLoader(ds39, batch_size=32, collate_fn=collate_audio, sampler=sampler)
@@ -83,7 +81,7 @@ if __name__ == "__main__":
 
     transformer = TransformerModel()
     transformer.load_state_dict(torch.load(
-        "../model_neural/models/TransformerModel_00001_00001_15_001.pt", map_location=device))
+        "../model_neural/models/TransformerModel.pt", map_location=device))
     transformer.to(device)
     transformer.eval()
 
@@ -92,12 +90,12 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    bc_pval = test_statistical_significance(conv1d, baseline, device)
-    bt_pval = test_statistical_significance(transformer, baseline, device)
-    ct_pval = test_statistical_significance(conv1d, transformer, device)
-
-    print(f"p-value of {names[0]} x {names[1]}: {bc_pval}")
-    print(f"p-value of {names[2]} x {names[1]}: {bt_pval}")
-    print(f"p-value of {names[0]} x {names[2]}: {ct_pval}")
     print("When p < 0.5, 2nd model outperforms 1st with [p]")
-    print("When p > 0.5, 1st model outperforms 2nd with [1 - p]")
+    print("When p > 0.5, 1st model outperforms 2nd with [1 - p]\n")
+
+    bc_pval = test_statistical_significance(conv1d, baseline, device)
+    print(f"p-value of {names[0]} x {names[1]}: {bc_pval}")
+    bt_pval = test_statistical_significance(transformer, baseline, device)
+    print(f"p-value of {names[2]} x {names[1]}: {bt_pval}")
+    ct_pval = test_statistical_significance(conv1d, transformer, device)
+    print(f"p-value of {names[0]} x {names[2]}: {ct_pval}")

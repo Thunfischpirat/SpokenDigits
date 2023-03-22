@@ -93,11 +93,13 @@ if __name__ == "__main__":
     model_name = "TransformerModel"
     model = TransformerModel()
 
-    train_set = ["george"]
-    val_set = ["jackson", "lucas", "nicolas", "yweweler", "theo"]
+    # train_set = ["george"]
+    # val_set = ["jackson", "lucas", "nicolas", "yweweler", "theo"]
+    train_set = "TRAIN"
+    val_set = "DEV"
 
     to_mel = True
-    optimize_hp = True
+    optimize_hp = False
 
     if not optimize_hp:
         trained_model, _ = train_model(
